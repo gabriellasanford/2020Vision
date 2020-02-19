@@ -32,12 +32,12 @@ def make_digit_map(data):
 def convolve(im, k):
     kh, kw = k.shape
     imh, imw = im.shape
-    print im.shape
-    print k.shape
+    print(im.shape)
+    print(k.shape)
     im_w_border = np.zeros((kh + imh - 1, kw + imw -1))
-    im_w_border[(kh-1)/2:(kh-1)/2+imh, (kw-1)/2:(kw-1)/2+imw] += im
+    im_w_border[(kh-1)//2:(kh-1)//2+imh, (kw-1)//2:(kw-1)//2+imw] += im
     new_img = np.array([[np.sum(k*im_w_border[i:i+kh, j:j+kw]) \
-                for j in range(imw)] for i in range(imh)], dtype='int')
+                for j in range(imw)] for i in range(imh)], dtype='float')
     print(new_img)
     new_img[new_img>255] = 255
     new_img[new_img<0] = 0
@@ -60,12 +60,22 @@ kernel = np.array([[-1, -1],[3, -1]])/3.0 # upper-right corner detector
 kernel1 = np.array([[-1, 0, 1], [0, 2, 0], [1, 0, -1]])/6.0
 kernel2 = np.array([[1, 0, -1], [0, 2, 0], [-1, 0, 1]])/6.0
 kernel3 = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])/math.sqrt(6)
+Sobelx = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])/math.sqrt(12)
+Sobely = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])/math.sqrt(12)
 
-data = read_images("mnist_medium.csv")
+data = read_images("data/mnist_medium.csv")
 digit_map = make_digit_map(data)
 
-imgr = digit_map[0][7].reshape((image_size*1, image_size/1))
+imgr = digit_map[8][7].reshape((image_size, image_size))
 plt.imshow(imgr, cmap=plt.cm.binary)
+plt.show()
+
+imgrc = convolve(imgr, Sobelx)
+plt.imshow(imgrc, cmap=plt.cm.binary)
+plt.show()
+
+imgrc = convolve(imgr, Sobely)
+plt.imshow(imgrc, cmap=plt.cm.binary)
 plt.show()
 
 imgrc = convolve(imgr, kernel1)

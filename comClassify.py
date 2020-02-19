@@ -8,13 +8,8 @@
 """
 
 import numpy as np
-<<<<<<< HEAD
-import cv2
-import matplotlib.pyplot as plt
-=======
 import matplotlib.pyplot as plt
 import cv2
->>>>>>> a45e7bdfa87253cea40cac99575e0eac557b066b
 
 image_size = 28 # width and length
 

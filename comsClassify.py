@@ -225,6 +225,64 @@ def Hough_circles(img):
 
 
 
+###############################################################
+# Function (and helpers) to trim whitespace from a digit image.
+###############################################################
+
+
+# Trims whitespace, leaving the digit centered in the image.
+# image -> image
+def trim_whitespace(image):
+    # (edge-near-top, edge-near-bottom, edge-near-left, edge-near-right)
+    edge_positions = list() # List, will eventually have four items
+    edge_positions.append(get_top_distance(image))
+    edge_positions.append(get_bottom_distance(image))
+    edge_positions.append(get_left_distance(image))
+    edge_positions.append(get_right_distance(image))
+
+    # Take out the piece containing the digit.
+    # TODO: Slice out part of image containing digit.
+    new_image = image[edge_positions[0]:(-edge_positions[1])+1, edge_positions[2]:(-edge_positions[3])+1]
+    print(edge_positions)
+    print(new_image.shape)
+    return new_image
+
+
+# Returns the number of the row in which the topmost non-white pixel is found.
+def get_top_distance(image) -> int:
+    for row in range(image.shape[0]):
+        for col in range(image.shape[1]):
+            if image[row][col] > 0:
+                return row
+
+
+# Returns the number of the row immediately after that in which the bottommost 
+# non-white pixel is found.
+def get_bottom_distance(image) -> int:
+    for row in range(1, image.shape[0] + 1):
+        for col in range(image.shape[1]):
+            if image[image.shape[0] - row][col] > 0:
+                return row 
+
+
+# Returns the number of the column in which the leftmost non-white pixel is found.
+def get_left_distance(image) -> int:
+    for col in range(image.shape[1]):
+        for row in range(image.shape[0]):
+            if image[row][col] > 0:
+                return col
+
+
+# Returns the number of the column immediately to the right of that in which the
+# rightmost non-white pixel is found.
+def get_right_distance(image) -> int:
+    for col in range(1, image.shape[1] + 1):
+        for row in range(image.shape[0]):
+            if image[row][image.shape[1] - col] > 0:
+                return col
+
+
+
 """
     Admin Functions
 """

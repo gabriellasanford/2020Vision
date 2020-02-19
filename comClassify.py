@@ -8,7 +8,8 @@
 """
 
 import numpy as np
-#import matplotlib.pyplot as plt
+import cv2
+import matplotlib.pyplot as plt
 
 image_size = 28 # width and length
 
@@ -150,6 +151,44 @@ def slantiness(img):
     #print imSE
     return sectional_density(imNE) + sectional_density(imSE)
 
+
+# David/Sri/Michael
+# Returns the convex hull as a list of points.
+def convex_hull(img: np.array) -> list:
+    # Convert the image to an OpenCV-compatible format.
+    compat_image = np.uint8(img)
+    # Threshold the image.
+    thresh_val, img2 = cv2.threshold(compat_image, 0, cv2.THRESH_OTSU,\
+        cv2.THRESH_BINARY)
+    plt.imshow(img2, cmap=plt.cm.binary)
+    plt.show()
+    # Find contours on the thresholded image.
+    img2, contours = cv2.findContours(img2,cv2.RETR_TREE,\
+        cv2.CHAIN_APPROX_SIMPLE)
+    plt.imshow(img2, cmap=plt.cm.binary)
+    plt.show()
+    # Create a list to hold the convex hull points.
+    hull = []
+    # Calculate the convex hull for each contour.
+    for i in range(len(contours)):
+        hull.append(cv2.convexHull(contours[i], False))
+    # For debug purposes, draw the convex hull.
+    # Create an empty black image.
+    hull_img = np.zeros((img2.shape[0], img2.shape[1],\
+        np.uint8))
+    # Draw contours and hull points
+    for i in range(len(contours)):
+        color_contours = (0, 255, 0) # Green, for contours.
+        color_hull = (255, 0, 0) # Blue, for hull
+        cv2.drawContours(hull_img, contours, i, color_contours, 1, 8)
+        cv2.drawContours(hull_img, hull, i, color_hull, 1, 8)
+    plt.imshow(hull_img, cmap=plt.cm.binary)
+    plt.show()
+    print(hull)
+    # Return the convex hull list.
+    return hull
+
+
 """
     Admin Functions
 """
@@ -279,15 +318,15 @@ def testR(feature_map, com_map):
 # List of implemented feature functions
 all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
                 vertical_lines, sectional_density, slantiness]
-all_features = [slantiness]
+all_features = [convex_hull]
 
 for f in all_features:
-    print "\n\n", f
+    print("\n\n", f)
 
     features = [f]
     
     # train
-    data = read_images("mnist_medium.csv")
+    data = read_images("data/mnist_medium.csv")
     digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
     com = find_com(feature_map)
@@ -295,15 +334,15 @@ for f in all_features:
     # Test on training data
     print("AMD Test", testAMD(feature_map, com))
     print("SPM Test", testSPM(feature_map, com))
-    print "R Test\n", np.array(testR(feature_map, com))
+    print("R Test\n", np.array(testR(feature_map, com)))
 
     # Test on test data
-    data = read_images("mnist_medium_test.csv")
+    data = read_images("data/mnist_medium_test.csv")
     digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
     print("AMD Test", testAMD(feature_map, com))
     print("SPM Test", testSPM(feature_map, com))
-    print "R Test\n", np.array(testR(feature_map, com))
+    print("R Test\n", np.array(testR(feature_map, com)))
 
 
 """

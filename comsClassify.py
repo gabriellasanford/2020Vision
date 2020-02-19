@@ -225,6 +225,89 @@ def Hough_circles(img):
 
 
 
+###############################################################################
+# Quarter slicer
+# A lot like sectional_density, but it works on variable size images, so it can
+# be used in conjunction with whitespace trimming.
+###############################################################################
+
+
+# Tweakable constant that puts an upper limit on the number of times the image
+# can be quartered.  On the first iteration, the image is cut into quarters, on
+# the second, those quarters are cut into quarters, and so on.
+MAX_RECURSIONS = 3
+
+
+# Entry point function for compatibility with comClassify testing function.
+def draw_and_quarter(img: np.array) -> list:
+    trimmed_img = trim_whitespace(img)
+    return quarter_density(trimmed_img, 0)
+
+
+# Carves image of any size into quarters and returns a list with the weight
+# (number of greyscale pixels) in each quarter.  Grabs weights recursively
+# and puts them all in a list.
+def quarter_density(image: np.array, iteration: int) -> list:
+    iteration += 1
+    # Get quarter slices, then weigh each slice
+    quarters = get_quarter_slices(image)
+    quarter_weights = list()
+    if iteration is MAX_RECURSIONS:
+        for quarter in quarters:
+            quarter_weights += get_image_weight(quarter)
+    else:
+        for quarter in quarters:
+            quarter_weights += quarter_density(quarter, iteration)
+    return quarter_weights
+
+
+# Slices the image into quarters and returns a list of quarters.
+def get_quarter_slices(image: np.array) -> list:
+    # Get the dimensions of the image, then cut them in half (to the nearest
+    # integer).
+    height, width = image.shape
+    half_height = height // 2
+    half_width = width // 2
+
+    # Slice the image into quarters and store the quarters in a list.
+    # List order is top-left, top-right, bottom-left, bottom-right.
+    quarter_slices = list()
+    quarter_slices.append(image[:half_height, :half_width])
+    quarter_slices.append(image[:half_height, half_width:])
+    quarter_slices.append(image[half_height:, :half_width])
+    quarter_slices.append(image[half_height:, half_width:])
+
+    return quarter_slices
+
+
+# Accepts an image of any size and returns its weight, determined by the number
+# of non-white pixels in the image.
+def get_image_weight(image: np.array) -> list:
+    weight = 0
+    height, width = image.shape
+    for row in range(height):
+        for col in range(width):
+            weight += image[row][col]
+    return [weight]
+
+
+#Method for picking out endpoints in images of digits
+def endpoints(image: np.array) -> np.array:
+    #Make the kernel for endpoint detection
+    endpoint_kernel = np.array([[-2, -2, -2], [-2, 10, -2], [-2, -2, -2]])
+    endpoint_kernel = endpoint_kernel/np.linalg.norm(endpoint_kernel)
+    #Trim whitespace on the image
+    r_img = trim_whitespace(image)
+    #Threshold the image to turn it into a blocky, black digit
+    r_img = threshold_image(r_img, (5, 255), (6, 0))
+    #Convolve the image to get rid of most non-endpoints
+    r_img = rconvolve(r_img, endpoint_kernel)
+    #Threshold again to clean up bad gray pixels
+    r_img = threshold_image(r_img, (50, 255), (52, 0))
+    return r_img
+
+
+
 ###############################################################
 # Function (and helpers) to trim whitespace from a digit image.
 ###############################################################
@@ -243,8 +326,6 @@ def trim_whitespace(image):
     # Take out the piece containing the digit.
     # TODO: Slice out part of image containing digit.
     new_image = image[edge_positions[0]:(-edge_positions[1])+1, edge_positions[2]:(-edge_positions[3])+1]
-    print(edge_positions)
-    print(new_image.shape)
     return new_image
 
 
@@ -320,7 +401,7 @@ def build_feature_map(digit_map, fnlist):
 # feature_map is a map from each digit to a list of feature vectors
 # Returns a map: digit -> Center of mass
 def find_coms(feature_map):
-    num_centers = 2
+    num_centers = 10
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
     com_map = {}
     for digit in feature_map:
@@ -418,8 +499,8 @@ def testR(feature_map, com_map):
     return predictions
 
 # List of implemented feature functions
-all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
-                vertical_lines, sectional_density, slantiness,\
+all_features = [draw_and_quarter, waviness, hv_weights, top_bottom_balance,\
+                combineWavy, vertical_lines, sectional_density, slantiness,\
                 edginess, Sobelness]
 #all_features = []
 
@@ -429,7 +510,7 @@ for f in all_features:
     features = [f]
     
     # train
-    data = read_images("data/mnist_train.csv")
+    data = read_images("data/mnist_medium.csv")
     digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
     com = find_coms(feature_map)

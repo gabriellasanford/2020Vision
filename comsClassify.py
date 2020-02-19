@@ -8,13 +8,8 @@
 """
 
 import numpy as np
-<<<<<<< HEAD
-import cv2
-import matplotlib.pyplot as plt
-=======
 import matplotlib.pyplot as plt
 import cv2
->>>>>>> a45e7bdfa87253cea40cac99575e0eac557b066b
 
 image_size = 28 # width and length
 
@@ -40,7 +35,7 @@ def edginess(img):
 # Waviness above, but performed after doing edge detection
 def Sobelness(img):  
     img2 = np.uint8(img)
-    edges = cv2.cv2.Sobel(img2,cv2.CV_64F,1,0,ksize=5)
+    edges = cv2.Sobel(img2,cv2.CV_64F,1,0,ksize=5)
     #print (edges)
     return waviness(edges)
 
@@ -174,41 +169,6 @@ def slantiness(img):
     return sectional_density(imNE) + sectional_density(imSE)
 
 
-# David/Sri/Michael
-# Returns the convex hull as a list of points.
-def convex_hull(img: np.array) -> list:
-    # Convert the image to an OpenCV-compatible format.
-    compat_image = np.uint8(img)
-    # Threshold the image.
-    thresh_val, img2 = cv2.threshold(compat_image, 0, cv2.THRESH_OTSU,\
-        cv2.THRESH_BINARY)
-    plt.imshow(img2, cmap=plt.cm.binary)
-    plt.show()
-    # Find contours on the thresholded image.
-    img2, contours = cv2.findContours(img2,cv2.RETR_TREE,\
-        cv2.CHAIN_APPROX_SIMPLE)
-    plt.imshow(img2, cmap=plt.cm.binary)
-    plt.show()
-    # Create a list to hold the convex hull points.
-    hull = []
-    # Calculate the convex hull for each contour.
-    for i in range(len(contours)):
-        hull.append(cv2.convexHull(contours[i], False))
-    # For debug purposes, draw the convex hull.
-    # Create an empty black image.
-    hull_img = np.zeros((img2.shape[0], img2.shape[1],\
-        np.uint8))
-    # Draw contours and hull points
-    for i in range(len(contours)):
-        color_contours = (0, 255, 0) # Green, for contours.
-        color_hull = (255, 0, 0) # Blue, for hull
-        cv2.drawContours(hull_img, contours, i, color_contours, 1, 8)
-        cv2.drawContours(hull_img, hull, i, color_hull, 1, 8)
-    plt.imshow(hull_img, cmap=plt.cm.binary)
-    plt.show()
-    print(hull)
-    # Return the convex hull list.
-    return hull
 
 # Sobel Gradient
 # The Sobel gradient (used properly on larger images than these digits) is a
@@ -301,11 +261,16 @@ def build_feature_map(digit_map, fnlist):
 # Find center of mass of each digit's feature vectors
 # feature_map is a map from each digit to a list of feature vectors
 # Returns a map: digit -> Center of mass
-def find_com(feature_map):
+def find_coms(feature_map):
+    num_centers = 2
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
     com_map = {}
     for digit in feature_map:
         feature_matrix = np.asfarray(feature_map[digit])
-        com_map[digit] = np.mean(feature_matrix, axis=0)
+        #com_map[digit] = np.mean(feature_matrix, axis=0)
+        ret,label,centers = cv2.kmeans(np.asarray(feature_map[digit], dtype='float32'), num_centers, \
+                    None, criteria, 10,cv2.KMEANS_RANDOM_CENTERS)
+        com_map[digit] = centers
     return com_map
 
 
@@ -340,10 +305,11 @@ def testAMD(feature_map, com_map):
         for ele in feature_map[key]:
             mdist = float("inf")
             for ckey in com_map:
-                dist = abs(np.linalg.norm(com_map[ckey]-ele))
-                if dist <= mdist:
-                    mdist = dist
-                    ccom = ckey
+                for com in com_map[ckey]:
+                    dist = abs(np.linalg.norm(com-ele))
+                    if dist < mdist:
+                        mdist = dist
+                        ccom = ckey
             if ccom == key:
                 countr +=1  
             else:
@@ -363,11 +329,12 @@ def testSPM(feature_map, com_map):
         for some_features in list_of_features:
             smallest_distance = float("inf")
             guess_digit = None
-            for candidate_digit, a_com in com_map.items():
-                distance = np.linalg.norm(a_com - some_features)
-                if distance < smallest_distance:
-                    smallest_distance = distance
-                    guess_digit = candidate_digit
+            for candidate_digit, com_list in com_map.items():
+                for a_com in com_list:
+                    distance = np.linalg.norm(a_com - some_features)
+                    if distance < smallest_distance:
+                        smallest_distance = distance
+                        guess_digit = candidate_digit
             if guess_digit == correct_digit:
                 num_correct += 1
             num_total += 1
@@ -383,19 +350,20 @@ def testR(feature_map, com_map):
         for some_features in list_of_features:
             smallest_distance = float("inf")
             guess_digit = None
-            for candidate_digit, a_com in com_map.items():
-                distance = np.linalg.norm(a_com - some_features)
-                if distance < smallest_distance:
-                    smallest_distance = distance
-                    guess_digit = candidate_digit
+            for candidate_digit, com_list in com_map.items():
+                for a_com in com_list:
+                    distance = np.linalg.norm(a_com - some_features)
+                    if distance < smallest_distance:
+                        smallest_distance = distance
+                        guess_digit = candidate_digit
             predictions[correct_digit][guess_digit] += 1
     return predictions
 
 # List of implemented feature functions
 all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
-                vertical_lines, sectional_density, slantiness, Hough_circles,\
-                edginess]
-all_features = [waviness]
+                vertical_lines, sectional_density, slantiness,\
+                edginess, Sobelness]
+#all_features = []
 
 for f in all_features:
     print ("\n\n", f)
@@ -403,15 +371,15 @@ for f in all_features:
     features = [f]
     
     # train
-    data = read_images("data/mnist_medium.csv")
+    data = read_images("data/mnist_train.csv")
     digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
-    com = find_com(feature_map)
+    com = find_coms(feature_map)
 
     # Test on training data
     print("AMD Test", testAMD(feature_map, com))
     print("SPM Test", testSPM(feature_map, com))
-    print( "R Test\n", np.array(testR(feature_map, com)))
+    #print( "R Test\n", np.array(testR(feature_map, com)))
 
     # Test on test data
     data = read_images("data/mnist_medium_test.csv")
@@ -419,7 +387,7 @@ for f in all_features:
     feature_map = build_feature_map(digit_map, features)
     print("AMD Test", testAMD(feature_map, com))
     print("SPM Test", testSPM(feature_map, com))
-    print( "R Test\n", np.array(testR(feature_map, com)))
+    #print( "R Test\n", np.array(testR(feature_map, com)))
 
            
 

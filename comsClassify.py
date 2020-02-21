@@ -299,11 +299,11 @@ def endpoints(image: np.array) -> np.array:
     #Trim whitespace on the image
     r_img = trim_whitespace(image)
     #Threshold the image to turn it into a blocky, black digit
-    r_img = threshold_image(r_img, (5, 255), (6, 0))
+    #r_img = threshold_image(r_img, (5, 255), (6, 0))
     #Convolve the image to get rid of most non-endpoints
-    r_img = rconvolve(r_img, endpoint_kernel)
+    r_img = convolve(r_img, endpoint_kernel)
     #Threshold again to clean up bad gray pixels
-    r_img = threshold_image(r_img, (50, 255), (52, 0))
+    #r_img = threshold_image(r_img, (50, 255), (52, 0))
     return r_img
 
 
@@ -314,6 +314,7 @@ def endpoints(image: np.array) -> np.array:
 
 
 # Trims whitespace, leaving the digit centered in the image.
+# Resizes trimmed image to 28x28.
 # image -> image
 def trim_whitespace(image):
     # (edge-near-top, edge-near-bottom, edge-near-left, edge-near-right)
@@ -326,7 +327,8 @@ def trim_whitespace(image):
     # Take out the piece containing the digit.
     # TODO: Slice out part of image containing digit.
     new_image = image[edge_positions[0]:(-edge_positions[1])+1, edge_positions[2]:(-edge_positions[3])+1]
-    return new_image
+    final_image = cv2.resize(new_image, (28, 28))
+    return final_image
 
 
 # Returns the number of the row in which the topmost non-white pixel is found.

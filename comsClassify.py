@@ -327,7 +327,7 @@ def trim_whitespace(image):
     # Take out the piece containing the digit.
     # TODO: Slice out part of image containing digit.
     new_image = image[edge_positions[0]:(-edge_positions[1])+1, edge_positions[2]:(-edge_positions[3])+1]
-    final_image = cv2.resize(new_image, (28, 28))
+    final_image = cv2.resize(new_image, (28, 28, 1))
     return final_image
 
 

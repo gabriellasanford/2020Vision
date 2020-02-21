@@ -445,7 +445,7 @@ def testKnn(data):
     print(np.array(predictions))
 
 # Test on test data
-test(read_images("data/mnist_medium_test.csv"))
+testKnn(read_images("data/mnist_medium_test.csv"))
 
     
     

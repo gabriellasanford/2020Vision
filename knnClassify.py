@@ -393,6 +393,26 @@ def testR(feature_map, com_map):
             predictions[correct_digit][guess_digit] += 1
     return predictions
 
+def testKnn(data):
+    digit_map = make_digit_map(data)
+    feature_map = build_feature_map(digit_map, features)
+
+    success = 0.0
+    failure = 0.0
+    predictions = [[0 for i in range(10)] for j in range(10)]
+    for digit in range(10):
+        for f in feature_map[digit]:
+            unkn = np.array([f]).astype(np.float32)
+            ret, results, neighbors ,dist = knn.findNearest(unkn, 3)
+            prediction = results[0][0]
+            predictions[digit][int(prediction)] += 1
+            if prediction == digit:
+                success += 1
+            else:
+                failure += 1
+    print(success/(success + failure))
+    print(np.array(predictions))
+
 # List of implemented feature functions
 all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
                 vertical_lines, sectional_density, slantiness,\
@@ -424,26 +444,8 @@ for f in all_features:
     knn = cv2.ml.KNearest_create()
     knn.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(labels).astype(np.float32))
 
-    # Test on test data
-    data = read_images("data/mnist_medium_test.csv")
-    digit_map = make_digit_map(data)
-    feature_map = build_feature_map(digit_map, features)
-
-    success = 0.0
-    failure = 0.0
-    predictions = [[0 for i in range(10)] for j in range(10)]
-    for digit in range(10):
-        for f in feature_map[digit]:
-            unkn = np.array([f]).astype(np.float32)
-            ret, results, neighbors ,dist = knn.findNearest(unkn, 3)
-            prediction = results[0][0]
-            predictions[digit][int(prediction)] += 1
-            if prediction == digit:
-                success += 1
-            else:
-                failure += 1
-    print(success/(success + failure))
-    print(np.array(predictions))
+# Test on test data
+testKnn(read_images("data/mnist_medium_test.csv"))
 
     
     

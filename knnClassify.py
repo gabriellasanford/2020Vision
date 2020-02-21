@@ -424,8 +424,7 @@ for f in all_features:
     knn = cv2.ml.KNearest_create()
     knn.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(labels).astype(np.float32))
 
-    # Test on test data
-    data = read_images("data/mnist_medium_test.csv")
+def testKnn(data):
     digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
 
@@ -444,6 +443,9 @@ for f in all_features:
                 failure += 1
     print(success/(success + failure))
     print(np.array(predictions))
+
+# Test on test data
+test(read_images("data/mnist_medium_test.csv"))
 
     
     

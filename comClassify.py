@@ -177,33 +177,17 @@ def convex_hull(img: np.array) -> list:
     # Threshold the image.
     thresh_val, img2 = cv2.threshold(compat_image, 0, cv2.THRESH_OTSU,\
         cv2.THRESH_BINARY)
-    plt.imshow(img2, cmap=plt.cm.binary)
-    plt.show()
     # Find contours on the thresholded image.
-    img2, contours = cv2.findContours(img2,cv2.RETR_TREE,\
+    contour_points, contours = cv2.findContours(np.uint8(img2), cv2.RETR_TREE,\
         cv2.CHAIN_APPROX_SIMPLE)
-    plt.imshow(img2, cmap=plt.cm.binary)
-    plt.show()
     # Create a list to hold the convex hull points.
-    hull = []
-    # Calculate the convex hull for each contour.
-    for i in range(len(contours)):
-        hull.append(cv2.convexHull(contours[i], False))
-    # For debug purposes, draw the convex hull.
-    # Create an empty black image.
-    hull_img = np.zeros((img2.shape[0], img2.shape[1],\
-        np.uint8))
-    # Draw contours and hull points
-    for i in range(len(contours)):
-        color_contours = (0, 255, 0) # Green, for contours.
-        color_hull = (255, 0, 0) # Blue, for hull
-        cv2.drawContours(hull_img, contours, i, color_contours, 1, 8)
-        cv2.drawContours(hull_img, hull, i, color_hull, 1, 8)
-    plt.imshow(hull_img, cmap=plt.cm.binary)
-    plt.show()
-    print(hull)
+    return_points = list()
+    hull = np.vstack(cv2.convexHull(np.float32(contour_points[0]), False))
+    for arr in hull:
+        for item in arr:
+            return_points.append(item)
     # Return the convex hull list.
-    return hull
+    return return_points
 
 # Sobel Gradient
 # The Sobel gradient (used properly on larger images than these digits) is a
@@ -248,7 +232,7 @@ def Hough_circles(img):
             for r in range(rmin, rmax+1, 1):
                 theta = 1.0/r
                 for i in range(int(2 * np.pi * r)):
-                    angle = theta * i;
+                    angle = theta * i
                     x, y = int(imx + r * np.cos(angle)), int(imy + r * np.sin(angle))
                     if x >= image_size or y >= image_size or x < 0 or y < 0: continue
                     hough[r-rmin][imy][imx] += img[y][x]
@@ -390,7 +374,7 @@ def testR(feature_map, com_map):
 all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
                 vertical_lines, sectional_density, slantiness, Hough_circles,\
                 edginess]
-all_features = [waviness]
+all_features = [convex_hull]
 
 data = read_images("data/mnist_medium.csv")
 digit_map = make_digit_map(data)

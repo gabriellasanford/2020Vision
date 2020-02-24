@@ -417,7 +417,6 @@ def testKnn(data):
 all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
                 vertical_lines, sectional_density, slantiness,\
                 edginess, Sobelness]
-all_features = [waviness]
 
 
 
@@ -438,8 +437,8 @@ for f in all_features:
         for f in feature_map[digit]:
             train.append(f)
             labels.append(digit)
-    print(train)
-    print(labels)
+    #print(train)
+    #print(labels)
     
     knn = cv2.ml.KNearest_create()
     knn.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(labels).astype(np.float32))

@@ -393,9 +393,10 @@ def testR(feature_map, com_map):
             predictions[correct_digit][guess_digit] += 1
     return predictions
 
-def testKnn(data):
-    digit_map = make_digit_map(data)
-    feature_map = build_feature_map(digit_map, features)
+# Tests a feature on the traninig data.
+def testKnn(feature):
+    feature_map = build_feature_map(test_digit_map, [feature])
+    knn = getTrainedKnn(feature)
 
     success = 0.0
     failure = 0.0
@@ -418,18 +419,12 @@ all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
                 vertical_lines, sectional_density, slantiness,\
                 edginess, Sobelness]
 
+# Returns a trained KNN object for a feature.
+def getTrainedKnn(feature):
+    print ("\n\n", feature.__name__)
 
-
-data = read_images("data/mnist_medium.csv")
-digit_map = make_digit_map(data)
-
-for f in all_features:
-    print ("\n\n", f)
-
-    features = [f]
-    
     # train
-    feature_map = build_feature_map(digit_map, features)
+    feature_map = build_feature_map(training_digit_map, [feature])
 
     train = []
     labels = []
@@ -443,8 +438,23 @@ for f in all_features:
     knn = cv2.ml.KNearest_create()
     knn.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(labels).astype(np.float32))
 
-# Test on test data
-testKnn(read_images("data/mnist_medium_test.csv"))
+    return knn
+
+
+training_data = read_images("data/mnist_medium.csv")
+training_digit_map = make_digit_map(training_data)
+
+test_data = read_images("data/mnist_medium_test.csv")
+test_digit_map = make_digit_map(test_data)
+
+# List of implemented feature functions
+all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
+                vertical_lines, sectional_density, slantiness,\
+                edginess, Sobelness]
+all_features = [waviness]
+
+for f in all_features:
+    testKnn(f)
 
     
     

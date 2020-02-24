@@ -8,6 +8,7 @@
 """
 
 import numpy as np
+import cv2
 #import matplotlib.pyplot as plt
 
 image_size = 28 # width and length
@@ -15,6 +16,16 @@ image_size = 28 # width and length
 """
     FEATURE FUNCTIONS
 """
+
+#Will, Gabriella, Amelia
+#hv_weights on canny-edged image
+#Results: 79/57
+def hv_weights_on_canny(img):
+    converted_img = np.uint8(img)
+    edges = cv2.Canny(converted_img,230,250)
+    return hv_weights(edges)
+
+
 
 # Number of b/w transitions along every other row
 # 14 dimensions
@@ -118,7 +129,7 @@ def color_transition_array(img):
 # Returns a 49 dimensional vector.
 def sectional_density(image):
     CELL_WIDTH, CELL_HEIGHT = 4, 4
-    pixel_percentages = [0 for i in range((image_size / CELL_WIDTH) * (image_size / CELL_HEIGHT))]
+    pixel_percentages = [0 for i in range((image_size // CELL_WIDTH) * (image_size // CELL_HEIGHT))]
     total_black_pixels, count = 0, 0
 
     for corner_y in range(0, (image_size - CELL_HEIGHT + 1), CELL_HEIGHT):
@@ -149,6 +160,11 @@ def slantiness(img):
     imSE[imSE > 150] = 0
     #print imSE
     return sectional_density(imNE) + sectional_density(imSE)
+
+
+
+
+
 
 """
     Admin Functions
@@ -201,7 +217,7 @@ def convolve(im, k):
     kh, kw = k.shape
     imh, imw = im.shape
     im_w_border = np.zeros((kh + imh - 1, kw + imw -1))
-    im_w_border[(kh-1)/2:(kh-1)/2+imh, (kw-1)/2:(kw-1)/2+imw] += im
+    im_w_border[(kh-1)//2:(kh-1)//2+imh, (kw-1)//2:(kw-1)//2+imw] += im
     new_img = np.array([[np.sum(k*im_w_border[i:i+kh, j:j+kw]) \
                 for j in range(imw)] for i in range(imh)], dtype='float')
     new_img[new_img>255] = 255
@@ -279,15 +295,15 @@ def testR(feature_map, com_map):
 # List of implemented feature functions
 all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
                 vertical_lines, sectional_density, slantiness]
-all_features = [slantiness]
+all_features = [sectional_density, sectional_density_on_rotated_blend]
 
 for f in all_features:
-    print "\n\n", f
+    print("\n\n", f)
 
     features = [f]
     
     # train
-    data = read_images("mnist_medium.csv")
+    data = read_images("data\mnist_medium.csv")
     digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
     com = find_com(feature_map)
@@ -295,15 +311,15 @@ for f in all_features:
     # Test on training data
     print("AMD Test", testAMD(feature_map, com))
     print("SPM Test", testSPM(feature_map, com))
-    print "R Test\n", np.array(testR(feature_map, com))
+    print("R Test\n", np.array(testR(feature_map, com)))
 
     # Test on test data
-    data = read_images("mnist_medium_test.csv")
+    data = read_images("data\mnist_medium_test.csv")
     digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
     print("AMD Test", testAMD(feature_map, com))
     print("SPM Test", testSPM(feature_map, com))
-    print "R Test\n", np.array(testR(feature_map, com))
+    print("R Test\n", np.array(testR(feature_map, com)))
 
 
 """

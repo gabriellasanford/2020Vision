@@ -12,7 +12,7 @@ image_size = 28 # width and length
 def drawCircle():
     r=12
     hough = np.zeros((image_size, image_size))
-    theta = 0.2/r
+    theta = 1/r
     imx, imy = 14, 14
     oldx, oldy = imx, imy
     for i in range(int(2 * np.pi / theta)):

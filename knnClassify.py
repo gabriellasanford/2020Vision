@@ -17,16 +17,6 @@ image_size = 28 # width and length
     FEATURE FUNCTIONS
 """
 
-#Will, Gabriella, Amelia
-#hv_weights on canny-edged image
-#Results: 79/57
-def hv_weights_on_canny(img):
-    converted_img = np.uint8(img)
-    edges = cv2.Canny(converted_img,230,250)
-    return hv_weights(edges)
-
-
-
 # Number of b/w transitions along every other row
 # 14 dimensions
 # Rob Hochberg
@@ -181,23 +171,39 @@ def slantiness(img):
 
 # David/Sri/Michael
 # Returns the convex hull as a list of points.
-def convex_hull(img: np.array) -> list:
+def convex_hull(img):
     # Convert the image to an OpenCV-compatible format.
     compat_image = np.uint8(img)
     # Threshold the image.
     thresh_val, img2 = cv2.threshold(compat_image, 0, cv2.THRESH_OTSU,\
         cv2.THRESH_BINARY)
+    plt.imshow(img2, cmap=plt.cm.binary)
+    plt.show()
     # Find contours on the thresholded image.
-    contour_points, contours = cv2.findContours(np.uint8(img2), cv2.RETR_TREE,\
+    img2, contours = cv2.findContours(img2,cv2.RETR_TREE,\
         cv2.CHAIN_APPROX_SIMPLE)
+    plt.imshow(img2, cmap=plt.cm.binary)
+    plt.show()
     # Create a list to hold the convex hull points.
-    return_points = list()
-    hull = np.vstack(cv2.convexHull(np.float32(contour_points[0]), False))
-    for arr in hull:
-        for item in arr:
-            return_points.append(item)
+    hull = []
+    # Calculate the convex hull for each contour.
+    for i in range(len(contours)):
+        hull.append(cv2.convexHull(contours[i], False))
+    # For debug purposes, draw the convex hull.
+    # Create an empty black image.
+    hull_img = np.zeros((img2.shape[0], img2.shape[1],\
+        np.uint8))
+    # Draw contours and hull points
+    for i in range(len(contours)):
+        color_contours = (0, 255, 0) # Green, for contours.
+        color_hull = (255, 0, 0) # Blue, for hull
+        cv2.drawContours(hull_img, contours, i, color_contours, 1, 8)
+        cv2.drawContours(hull_img, hull, i, color_hull, 1, 8)
+    plt.imshow(hull_img, cmap=plt.cm.binary)
+    plt.show()
+    print(hull)
     # Return the convex hull list.
-    return return_points
+    return hull
 
 # Sobel Gradient
 # The Sobel gradient (used properly on larger images than these digits) is a
@@ -242,7 +248,7 @@ def Hough_circles(img):
             for r in range(rmin, rmax+1, 1):
                 theta = 1.0/r
                 for i in range(int(2 * np.pi * r)):
-                    angle = theta * i
+                    angle = theta * i;
                     x, y = int(imx + r * np.cos(angle)), int(imy + r * np.sin(angle))
                     if x >= image_size or y >= image_size or x < 0 or y < 0: continue
                     hough[r-rmin][imy][imx] += img[y][x]
@@ -251,7 +257,6 @@ def Hough_circles(img):
     #plt.imshow(hough[0], cmap=plt.cm.binary)
     #plt.show()
     return sectional_density(hough[0])
-
 
 
 """
@@ -290,11 +295,16 @@ def build_feature_map(digit_map, fnlist):
 # Find center of mass of each digit's feature vectors
 # feature_map is a map from each digit to a list of feature vectors
 # Returns a map: digit -> Center of mass
-def find_com(feature_map):
+def find_coms(feature_map):
+    num_centers = 2
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
     com_map = {}
     for digit in feature_map:
         feature_matrix = np.asfarray(feature_map[digit])
-        com_map[digit] = np.mean(feature_matrix, axis=0)
+        #com_map[digit] = np.mean(feature_matrix, axis=0)
+        ret,label,centers = cv2.kmeans(np.asarray(feature_map[digit], dtype='float32'), num_centers, \
+                    None, criteria, 10,cv2.KMEANS_RANDOM_CENTERS)
+        com_map[digit] = centers
     return com_map
 
 
@@ -329,10 +339,11 @@ def testAMD(feature_map, com_map):
         for ele in feature_map[key]:
             mdist = float("inf")
             for ckey in com_map:
-                dist = abs(np.linalg.norm(com_map[ckey]-ele))
-                if dist <= mdist:
-                    mdist = dist
-                    ccom = ckey
+                for com in com_map[ckey]:
+                    dist = abs(np.linalg.norm(com-ele))
+                    if dist < mdist:
+                        mdist = dist
+                        ccom = ckey
             if ccom == key:
                 countr +=1  
             else:
@@ -352,11 +363,12 @@ def testSPM(feature_map, com_map):
         for some_features in list_of_features:
             smallest_distance = float("inf")
             guess_digit = None
-            for candidate_digit, a_com in com_map.items():
-                distance = np.linalg.norm(a_com - some_features)
-                if distance < smallest_distance:
-                    smallest_distance = distance
-                    guess_digit = candidate_digit
+            for candidate_digit, com_list in com_map.items():
+                for a_com in com_list:
+                    distance = np.linalg.norm(a_com - some_features)
+                    if distance < smallest_distance:
+                        smallest_distance = distance
+                        guess_digit = candidate_digit
             if guess_digit == correct_digit:
                 num_correct += 1
             num_total += 1
@@ -372,57 +384,81 @@ def testR(feature_map, com_map):
         for some_features in list_of_features:
             smallest_distance = float("inf")
             guess_digit = None
-            for candidate_digit, a_com in com_map.items():
-                distance = np.linalg.norm(a_com - some_features)
-                if distance < smallest_distance:
-                    smallest_distance = distance
-                    guess_digit = candidate_digit
+            for candidate_digit, com_list in com_map.items():
+                for a_com in com_list:
+                    distance = np.linalg.norm(a_com - some_features)
+                    if distance < smallest_distance:
+                        smallest_distance = distance
+                        guess_digit = candidate_digit
             predictions[correct_digit][guess_digit] += 1
     return predictions
 
+# Tests a feature on the traninig data.
+def testKnn(feature):
+    feature_map = build_feature_map(test_digit_map, [feature])
+    knn = getTrainedKnn(feature)
+
+    success = 0.0
+    failure = 0.0
+    predictions = [[0 for i in range(10)] for j in range(10)]
+    for digit in range(10):
+        for f in feature_map[digit]:
+            unkn = np.array([f]).astype(np.float32)
+            ret, results, neighbors ,dist = knn.findNearest(unkn, 3)
+            prediction = results[0][0]
+            predictions[digit][int(prediction)] += 1
+            if prediction == digit:
+                success += 1
+            else:
+                failure += 1
+    print(success/(success + failure))
+    print(np.array(predictions))
+
 # List of implemented feature functions
 all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
-                vertical_lines, sectional_density, slantiness, Hough_circles,\
-                edginess]
-all_features = [convex_hull]
+                vertical_lines, sectional_density, slantiness,\
+                edginess, Sobelness]
 
-data = read_images("data/mnist_medium.csv")
-digit_map = make_digit_map(data)
+# Returns a trained KNN object for a feature.
+def getTrainedKnn(feature):
+    print ("\n\n", feature.__name__)
+
+    # train
+    feature_map = build_feature_map(training_digit_map, [feature])
+
+    train = []
+    labels = []
+    for digit in range(10):
+        for f in feature_map[digit]:
+            train.append(f)
+            labels.append(digit)
+    #print(train)
+    #print(labels)
+    
+    knn = cv2.ml.KNearest_create()
+    knn.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(labels).astype(np.float32))
+
+    return knn
+
+
+training_data = read_images("data/mnist_medium.csv")
+training_digit_map = make_digit_map(training_data)
+
+test_data = read_images("data/mnist_medium_test.csv")
+test_digit_map = make_digit_map(test_data)
+
+# List of implemented feature functions
+all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
+                vertical_lines, sectional_density, slantiness,\
+                edginess, Sobelness]
+all_features = [waviness]
 
 for f in all_features:
-    print ("\n\n", f)
+    testKnn(f)
 
-    features = [f]
     
-    # train
-    feature_map = build_feature_map(digit_map, features)
-    com = find_com(feature_map)
-
-    # Test on training data
-    print("AMD Test", testAMD(feature_map, com))
-    print("SPM Test", testSPM(feature_map, com))
-    print( "R Test\n", np.array(testR(feature_map, com)))
-
-    # Test on test data
-    data = read_images("data/mnist_medium_test.csv")
-    digit_map = make_digit_map(data)
-    feature_map = build_feature_map(digit_map, features)
-    print("AMD Test", testAMD(feature_map, com))
-    print("SPM Test", testSPM(feature_map, com))
-    print( "R Test\n", np.array(testR(feature_map, com)))
-
-           
-
-"""
-data = read_images("mnist_medium.csv")
-digit_map = make_digit_map(data)
-
-for img in digit_map[8]:
-    imgr = img.reshape((image_size*1, image_size/1))
-    plt.imshow(imgr, cmap=plt.cm.binary)
-    plt.show()
-"""
-
+    
+    
 
 
            

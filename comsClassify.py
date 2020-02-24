@@ -17,16 +17,6 @@ image_size = 28 # width and length
     FEATURE FUNCTIONS
 """
 
-#Will, Gabriella, Amelia
-#hv_weights on canny-edged image
-#Results: 79/57
-def hv_weights_on_canny(img):
-    converted_img = np.uint8(img)
-    edges = cv2.Canny(converted_img,230,250)
-    return hv_weights(edges)
-
-
-
 # Number of b/w transitions along every other row
 # 14 dimensions
 # Rob Hochberg
@@ -45,7 +35,7 @@ def edginess(img):
 # Waviness above, but performed after doing edge detection
 def Sobelness(img):  
     img2 = np.uint8(img)
-    edges = cv2.cv2.Sobel(img2,cv2.CV_64F,1,0,ksize=5)
+    edges = cv2.Sobel(img2,cv2.CV_64F,1,0,ksize=5)
     #print (edges)
     return waviness(edges)
 
@@ -179,25 +169,6 @@ def slantiness(img):
     return sectional_density(imNE) + sectional_density(imSE)
 
 
-# David/Sri/Michael
-# Returns the convex hull as a list of points.
-def convex_hull(img: np.array) -> list:
-    # Convert the image to an OpenCV-compatible format.
-    compat_image = np.uint8(img)
-    # Threshold the image.
-    thresh_val, img2 = cv2.threshold(compat_image, 0, cv2.THRESH_OTSU,\
-        cv2.THRESH_BINARY)
-    # Find contours on the thresholded image.
-    contour_points, contours = cv2.findContours(np.uint8(img2), cv2.RETR_TREE,\
-        cv2.CHAIN_APPROX_SIMPLE)
-    # Create a list to hold the convex hull points.
-    return_points = list()
-    hull = np.vstack(cv2.convexHull(np.float32(contour_points[0]), False))
-    for arr in hull:
-        for item in arr:
-            return_points.append(item)
-    # Return the convex hull list.
-    return return_points
 
 # Sobel Gradient
 # The Sobel gradient (used properly on larger images than these digits) is a
@@ -242,7 +213,7 @@ def Hough_circles(img):
             for r in range(rmin, rmax+1, 1):
                 theta = 1.0/r
                 for i in range(int(2 * np.pi * r)):
-                    angle = theta * i
+                    angle = theta * i;
                     x, y = int(imx + r * np.cos(angle)), int(imy + r * np.sin(angle))
                     if x >= image_size or y >= image_size or x < 0 or y < 0: continue
                     hough[r-rmin][imy][imx] += img[y][x]
@@ -251,6 +222,147 @@ def Hough_circles(img):
     #plt.imshow(hough[0], cmap=plt.cm.binary)
     #plt.show()
     return sectional_density(hough[0])
+
+
+
+###############################################################################
+# Quarter slicer
+# A lot like sectional_density, but it works on variable size images, so it can
+# be used in conjunction with whitespace trimming.
+###############################################################################
+
+
+# Tweakable constant that puts an upper limit on the number of times the image
+# can be quartered.  On the first iteration, the image is cut into quarters, on
+# the second, those quarters are cut into quarters, and so on.
+MAX_RECURSIONS = 3
+
+
+# Entry point function for compatibility with comClassify testing function.
+def draw_and_quarter(img: np.array) -> list:
+    trimmed_img = trim_whitespace(img)
+    return quarter_density(trimmed_img, 0)
+
+
+# Carves image of any size into quarters and returns a list with the weight
+# (number of greyscale pixels) in each quarter.  Grabs weights recursively
+# and puts them all in a list.
+def quarter_density(image: np.array, iteration: int) -> list:
+    iteration += 1
+    # Get quarter slices, then weigh each slice
+    quarters = get_quarter_slices(image)
+    quarter_weights = list()
+    if iteration is MAX_RECURSIONS:
+        for quarter in quarters:
+            quarter_weights += get_image_weight(quarter)
+    else:
+        for quarter in quarters:
+            quarter_weights += quarter_density(quarter, iteration)
+    return quarter_weights
+
+
+# Slices the image into quarters and returns a list of quarters.
+def get_quarter_slices(image: np.array) -> list:
+    # Get the dimensions of the image, then cut them in half (to the nearest
+    # integer).
+    height, width = image.shape
+    half_height = height // 2
+    half_width = width // 2
+
+    # Slice the image into quarters and store the quarters in a list.
+    # List order is top-left, top-right, bottom-left, bottom-right.
+    quarter_slices = list()
+    quarter_slices.append(image[:half_height, :half_width])
+    quarter_slices.append(image[:half_height, half_width:])
+    quarter_slices.append(image[half_height:, :half_width])
+    quarter_slices.append(image[half_height:, half_width:])
+
+    return quarter_slices
+
+
+# Accepts an image of any size and returns its weight, determined by the number
+# of non-white pixels in the image.
+def get_image_weight(image: np.array) -> list:
+    weight = 0
+    height, width = image.shape
+    for row in range(height):
+        for col in range(width):
+            weight += image[row][col]
+    return [weight]
+
+
+#Method for picking out endpoints in images of digits
+def endpoints(image: np.array) -> np.array:
+    #Make the kernel for endpoint detection
+    endpoint_kernel = np.array([[-2, -2, -2], [-2, 10, -2], [-2, -2, -2]])
+    endpoint_kernel = endpoint_kernel/np.linalg.norm(endpoint_kernel)
+    #Trim whitespace on the image
+    r_img = trim_whitespace(image)
+    #Threshold the image to turn it into a blocky, black digit
+    #r_img = threshold_image(r_img, (5, 255), (6, 0))
+    #Convolve the image to get rid of most non-endpoints
+    r_img = convolve(r_img, endpoint_kernel)
+    #Threshold again to clean up bad gray pixels
+    #r_img = threshold_image(r_img, (50, 255), (52, 0))
+    return r_img
+
+
+
+###############################################################
+# Function (and helpers) to trim whitespace from a digit image.
+###############################################################
+
+
+# Trims whitespace, leaving the digit centered in the image.
+# Resizes trimmed image to 28x28.
+# image -> image
+def trim_whitespace(image):
+    # (edge-near-top, edge-near-bottom, edge-near-left, edge-near-right)
+    edge_positions = list() # List, will eventually have four items
+    edge_positions.append(get_top_distance(image))
+    edge_positions.append(get_bottom_distance(image))
+    edge_positions.append(get_left_distance(image))
+    edge_positions.append(get_right_distance(image))
+
+    # Take out the piece containing the digit.
+    # TODO: Slice out part of image containing digit.
+    new_image = image[edge_positions[0]:(-edge_positions[1])+1, edge_positions[2]:(-edge_positions[3])+1]
+    final_image = cv2.resize(new_image, (28, 28, 1))
+    return final_image
+
+
+# Returns the number of the row in which the topmost non-white pixel is found.
+def get_top_distance(image) -> int:
+    for row in range(image.shape[0]):
+        for col in range(image.shape[1]):
+            if image[row][col] > 0:
+                return row
+
+
+# Returns the number of the row immediately after that in which the bottommost 
+# non-white pixel is found.
+def get_bottom_distance(image) -> int:
+    for row in range(1, image.shape[0] + 1):
+        for col in range(image.shape[1]):
+            if image[image.shape[0] - row][col] > 0:
+                return row 
+
+
+# Returns the number of the column in which the leftmost non-white pixel is found.
+def get_left_distance(image) -> int:
+    for col in range(image.shape[1]):
+        for row in range(image.shape[0]):
+            if image[row][col] > 0:
+                return col
+
+
+# Returns the number of the column immediately to the right of that in which the
+# rightmost non-white pixel is found.
+def get_right_distance(image) -> int:
+    for col in range(1, image.shape[1] + 1):
+        for row in range(image.shape[0]):
+            if image[row][image.shape[1] - col] > 0:
+                return col
 
 
 
@@ -290,11 +402,16 @@ def build_feature_map(digit_map, fnlist):
 # Find center of mass of each digit's feature vectors
 # feature_map is a map from each digit to a list of feature vectors
 # Returns a map: digit -> Center of mass
-def find_com(feature_map):
+def find_coms(feature_map):
+    num_centers = 10
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
     com_map = {}
     for digit in feature_map:
         feature_matrix = np.asfarray(feature_map[digit])
-        com_map[digit] = np.mean(feature_matrix, axis=0)
+        #com_map[digit] = np.mean(feature_matrix, axis=0)
+        ret,label,centers = cv2.kmeans(np.asarray(feature_map[digit], dtype='float32'), num_centers, \
+                    None, criteria, 10,cv2.KMEANS_RANDOM_CENTERS)
+        com_map[digit] = centers
     return com_map
 
 
@@ -329,10 +446,11 @@ def testAMD(feature_map, com_map):
         for ele in feature_map[key]:
             mdist = float("inf")
             for ckey in com_map:
-                dist = abs(np.linalg.norm(com_map[ckey]-ele))
-                if dist <= mdist:
-                    mdist = dist
-                    ccom = ckey
+                for com in com_map[ckey]:
+                    dist = abs(np.linalg.norm(com-ele))
+                    if dist < mdist:
+                        mdist = dist
+                        ccom = ckey
             if ccom == key:
                 countr +=1  
             else:
@@ -352,11 +470,12 @@ def testSPM(feature_map, com_map):
         for some_features in list_of_features:
             smallest_distance = float("inf")
             guess_digit = None
-            for candidate_digit, a_com in com_map.items():
-                distance = np.linalg.norm(a_com - some_features)
-                if distance < smallest_distance:
-                    smallest_distance = distance
-                    guess_digit = candidate_digit
+            for candidate_digit, com_list in com_map.items():
+                for a_com in com_list:
+                    distance = np.linalg.norm(a_com - some_features)
+                    if distance < smallest_distance:
+                        smallest_distance = distance
+                        guess_digit = candidate_digit
             if guess_digit == correct_digit:
                 num_correct += 1
             num_total += 1
@@ -372,22 +491,20 @@ def testR(feature_map, com_map):
         for some_features in list_of_features:
             smallest_distance = float("inf")
             guess_digit = None
-            for candidate_digit, a_com in com_map.items():
-                distance = np.linalg.norm(a_com - some_features)
-                if distance < smallest_distance:
-                    smallest_distance = distance
-                    guess_digit = candidate_digit
+            for candidate_digit, com_list in com_map.items():
+                for a_com in com_list:
+                    distance = np.linalg.norm(a_com - some_features)
+                    if distance < smallest_distance:
+                        smallest_distance = distance
+                        guess_digit = candidate_digit
             predictions[correct_digit][guess_digit] += 1
     return predictions
 
 # List of implemented feature functions
-all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
-                vertical_lines, sectional_density, slantiness, Hough_circles,\
-                edginess]
-all_features = [convex_hull]
-
-data = read_images("data/mnist_medium.csv")
-digit_map = make_digit_map(data)
+all_features = [draw_and_quarter, waviness, hv_weights, top_bottom_balance,\
+                combineWavy, vertical_lines, sectional_density, slantiness,\
+                edginess, Sobelness]
+#all_features = []
 
 for f in all_features:
     print ("\n\n", f)
@@ -395,13 +512,15 @@ for f in all_features:
     features = [f]
     
     # train
+    data = read_images("data/mnist_medium.csv")
+    digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
-    com = find_com(feature_map)
+    com = find_coms(feature_map)
 
     # Test on training data
     print("AMD Test", testAMD(feature_map, com))
     print("SPM Test", testSPM(feature_map, com))
-    print( "R Test\n", np.array(testR(feature_map, com)))
+    #print( "R Test\n", np.array(testR(feature_map, com)))
 
     # Test on test data
     data = read_images("data/mnist_medium_test.csv")
@@ -409,7 +528,7 @@ for f in all_features:
     feature_map = build_feature_map(digit_map, features)
     print("AMD Test", testAMD(feature_map, com))
     print("SPM Test", testSPM(feature_map, com))
-    print( "R Test\n", np.array(testR(feature_map, com)))
+    #print( "R Test\n", np.array(testR(feature_map, com)))
 
            
 

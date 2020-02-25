@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
+import sys
 
 img_orig = cv2.imread("../sudoku.png", cv2.IMREAD_GRAYSCALE)
 
@@ -28,6 +29,33 @@ detector = cv2.SimpleBlobDetector_create(params)
 # Detect blobs.
 keypoints = detector.detect(img)
 print([(k.pt, k.size) for k in keypoints])
+
+
+# deduce what sudoku cell each keypoint is in.
+# returns a list of tuples (i, j) where is i is
+# the row index and j is the column index.
+def duy_paul_gabriella_keypoints_to_cells(keypoint_list):
+    left = sys.maxsize
+    right = 0
+    top = sys.maxsize
+    bottom = 0
+    cells = []
+    for a_keypoint in keypoint_list:
+        left = min(left, a_keypoint.pt[0])
+        right = max(right, a_keypoint.pt[0])
+        top = min(top, a_keypoint.pt[1])
+        bottom = max(bottom, a_keypoint.pt[1])
+    # distance from one column center to the next
+    x_bucket_size = (right - left) / 8
+    # distance from one row center to the next
+    y_bucket_size = (bottom - top) / 8
+    for a_keypoint in keypoint_list:
+        x, y = a_keypoint.pt
+        j = round((x - left) / x_bucket_size)
+        i = round((y - top) / y_bucket_size)
+        cells.append((i, j))
+    return cells
+
 
 # Draw detected blobs as red circles.
 # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the

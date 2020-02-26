@@ -440,7 +440,53 @@ def getTrainedKnn(feature):
 
     return knn
 
+# Sri, Anthony, Eniola
+# classifies a single image given a knn and the feature map of the image
+def classify_digit(knn, feature_map):
+    _, results, _, _ = knn.findNearest(np.array([feature_map]).astype(np.float32), 3)
+    prediction = results[0][0]
+    return prediction
 
+def test_existing_knn(feature, knn, test_map):
+    feature_map = build_feature_map(test_map, [feature])
+
+    success = 0.0
+    failure = 0.0
+    predictions = [[0 for i in range(10)] for j in range(10)]
+    for digit in range(10):
+        for f in feature_map[digit]:
+            unkn = np.array([f]).astype(np.float32)
+            ret, results, neighbors ,dist = knn.findNearest(unkn, 3)
+            prediction = results[0][0]
+            predictions[digit][int(prediction)] += 1
+            if prediction == digit:
+                success += 1
+            else:
+                failure += 1
+    print(success/(success + failure))
+    print(np.array(predictions))
+
+# Returns a trained KNN object for a feature.
+def make_trained_knn(feature, training_map):
+    print ("\n\n", feature.__name__)
+    
+    # train
+    feature_map = build_feature_map(training_map, [feature])
+
+    train = []
+    labels = []
+    for digit in range(10):
+        for f in feature_map[digit]:
+            train.append(f)
+            labels.append(digit)
+    #print(train)
+    #print(labels)
+    
+    knn = cv2.ml.KNearest_create()
+    knn.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(labels).astype(np.float32))
+
+    return knn
+    
 training_data = read_images("data/mnist_medium.csv")
 training_digit_map = make_digit_map(training_data)
 

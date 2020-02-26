@@ -132,7 +132,8 @@ print(x_dictionary)
 y_dictionary = map_keypoints(keypoints, 10, "y")
 print(y_dictionary)
 
-draw_keypoint_grid(keypoints, 500)
+height, width = img_orig.shape[:2]
+draw_keypoint_grid(keypoints, height)
 
 '''
 for k in keypoints:

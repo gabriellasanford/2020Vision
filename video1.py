@@ -46,16 +46,6 @@ def classify_imgs(digit_imgs):
     if classifier is None:
         classifier = make_classifier(feature)
 
-    """correct_classifications = [8,8,8,8,8,9,9,9,9,6,6,6,6,6,7,5,1,4,2,2,7,1,3,4,3,\
-                               5,1,7,3,5]
-    correct_map = {i:[] for i in range(10)}
-    correct_count = {i:0 for i in range(10)}
-    for i in range(len(correct_classifications)):
-        correct_map[correct_classifications[i]].append(digit_imgs[i])
-        correct_count[correct_classifications[i]] += 1
-    print(correct_count)
-    knn.test_existing_knn(feature, classifier, correct_map)"""
-
     result = []
     for digit in digit_imgs:
         img = cv2.resize(digit, (28, 28))
@@ -139,9 +129,6 @@ im_with_keypoints = cv2.drawKeypoints(img, keypoints, None, (255,0,255),\
 cv2.imshow("Keypoints", im_with_keypoints)
 cv2.waitKey(0)
 
-#stores all found digits (remove for push)
-all_digit_imgs = []
-
 for k in keypoints:
     size = int(k.size)
     p = tuple(int(x-size/2) for x in k.pt)
@@ -149,13 +136,11 @@ for k in keypoints:
     cv2.rectangle(img, p, (p[0]+size, p[1]+size), 200, 5)
 
     digit_img = img_orig[p[1]:p[1]+size, p[0]:p[0]+size]
-    all_digit_imgs.append(digit_img) #(remove for push)
-    """cv2.imshow("One Digit", digit_img)
+    cv2.imshow("One Digit", digit_img)
     while cv2.waitKey(1) & 0xFF != ord('n'):
-        continue"""
-print(classify_imgs(np.array(all_digit_imgs)))
+        continue
 cv2.imshow("Blob Rectangles", img)
-"""
+
 cap = cv2.VideoCapture(0)
 
 while(True):
@@ -172,4 +157,4 @@ while(True):
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
-"""
+

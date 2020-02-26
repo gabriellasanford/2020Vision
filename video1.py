@@ -1,8 +1,77 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
+import knnClassify as knn
 
-img_orig = cv2.imread("../sudoku.png", cv2.IMREAD_GRAYSCALE)
+# stores a trained knnClassify. Initiated as None to avoid
+# unnecessary overhead if not used
+classifier = None
+
+
+def make_classifier(feature):
+    training_map = {}
+
+    fonts = [cv2.FONT_HERSHEY_SIMPLEX,\
+             cv2.FONT_HERSHEY_DUPLEX,cv2.FONT_HERSHEY_COMPLEX,\
+             cv2.FONT_HERSHEY_TRIPLEX,cv2.FONT_HERSHEY_SCRIPT_SIMPLEX,\
+             cv2.FONT_HERSHEY_SCRIPT_COMPLEX,cv2.FONT_ITALIC]
+    
+    for i in range(0,10):
+        training_map[i] = []
+        for k in range(0,50):
+            img = np.zeros((28, 28,3), dtype=np.uint8)
+            img = cv2.putText(img, str(i), (5+k%2,22+k%3), fonts[k%len(fonts)],\
+                              0.85, (255,255,255), 2, cv2.LINE_AA)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            #img = cv2.bitwise_not(img)
+            training_map[i].append(img)
+            """cv2.imshow("digit"+str(i), img)
+            while cv2.waitKey(1) & 0xFF != ord('n'):
+                continue"""
+
+    classifier = knn.make_trained_knn(feature, training_map)
+
+    knn.test_existing_knn(knn.slantiness, classifier, training_map)
+
+
+    return classifier
+
+# Sri, Anthony, Eniola
+# takes an np.array of digit images and returns an np.array of their respective digits
+def classify_imgs(digit_imgs):
+    feature = knn.slantiness
+    
+    digit_imgs = np.array(list(map(lambda i: cv2.resize(i, (28, 28)), digit_imgs)))
+    global classifier
+    if classifier is None:
+        classifier = make_classifier(feature)
+
+    """correct_classifications = [8,8,8,8,8,9,9,9,9,6,6,6,6,6,7,5,1,4,2,2,7,1,3,4,3,\
+                               5,1,7,3,5]
+    correct_map = {i:[] for i in range(10)}
+    correct_count = {i:0 for i in range(10)}
+    for i in range(len(correct_classifications)):
+        correct_map[correct_classifications[i]].append(digit_imgs[i])
+        correct_count[correct_classifications[i]] += 1
+    print(correct_count)
+    knn.test_existing_knn(feature, classifier, correct_map)"""
+
+    result = []
+    for digit in digit_imgs:
+        img = cv2.resize(digit, (28, 28))
+        img = cv2.bitwise_not(img)
+        predict = knn.classify_digit(classifier, np.array(feature(img)))
+        result.append(predict)
+        print(predict)
+        #print(img)
+        cv2.imshow("One Digit", img)
+        while cv2.waitKey(1) & 0xFF != ord('n'):
+            continue
+    
+    return np.array(result)
+    
+
+img_orig = cv2.imread("sudoku.png", cv2.IMREAD_GRAYSCALE)
 
 # Show the original image
 # This is a matplotlib display, so we must close the window to move forward
@@ -43,6 +112,8 @@ im_with_keypoints = cv2.drawKeypoints(img, keypoints, None, (255,0,255),\
 cv2.imshow("Keypoints", im_with_keypoints)
 cv2.waitKey(0)
 
+#stores all found digits (remove for push)
+all_digit_imgs = []
 
 for k in keypoints:
     size = int(k.size)
@@ -51,13 +122,13 @@ for k in keypoints:
     cv2.rectangle(img, p, (p[0]+size, p[1]+size), 200, 5)
 
     digit_img = img_orig[p[1]:p[1]+size, p[0]:p[0]+size]
-    cv2.imshow("One Digit", digit_img)
+    all_digit_imgs.append(digit_img) #(remove for push)
+    """cv2.imshow("One Digit", digit_img)
     while cv2.waitKey(1) & 0xFF != ord('n'):
-        continue
+        continue"""
+print(classify_imgs(np.array(all_digit_imgs)))
 cv2.imshow("Blob Rectangles", img)
-
-
-
+"""
 cap = cv2.VideoCapture(0)
 
 while(True):
@@ -74,3 +145,4 @@ while(True):
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
+"""

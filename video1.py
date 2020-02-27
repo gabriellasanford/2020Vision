@@ -101,7 +101,7 @@ detector = cv2.SimpleBlobDetector_create(params)
  
 # Detect blobs.
 keypoints = detector.detect(img)
-print([(k.pt, k.size) for k in keypoints])
+#print([(k.pt, k.size) for k in keypoints])
 
 
 # deduce what sudoku cell each keypoint is in.
@@ -220,6 +220,7 @@ def draw_keypoint_grid(list_of_keypoints: list, size: int):
     cv2.waitKey()
 
 
+
 #Matt & Michael 
 #map keypoints x, y to a grid coordinate
 
@@ -263,16 +264,13 @@ def keypoints_to_board(list_of_points: list):
     row_dict = map_keypoints(list_of_points, 10, "y")
     column_dict = map_keypoints(list_of_points, 10, "x")
     #Construct the Sudoku board as 2-d list, fill it with -1s as empty values
-    board = [[-1 for col in range(9)] for row in range(9)]
+    board = [[0 for col in range(9)] for row in range(9)]
 
     #Loop through and get the images to classify
     #Classify them, and put them in their spot on the board
     for k in keypoints:
-        #Code courtesy of Dr. Hochberg for snipping the blobs
-        size = int(k.size)
-        p = tuple(int(x-size/2) for x in k.pt)
-        cv2.rectangle(img, p, (p[0]+size, p[1]+size), 200, 5)
-        digit_img = img_orig[p[1]:p[1]+size, p[0]:p[0]+size]
+        #Get the image of the digit from the keypoint
+        digit_img = get_digit_image(k)
         #Now resize that to 28x28 for Anthony's method to get the value of the digit
         desired_size = (28, 28)
         digit_img = cv2.resize(digit_img, desired_size)
@@ -289,10 +287,21 @@ def keypoints_to_board(list_of_points: list):
     return board
 
 
+#Returns the digit image of a keypoint from a Sudoku board
+#Code courtesy of Dr. Hochberg for snipping the blobs
+def get_digit_image(k_point: cv2.KeyPoint) -> np.array:
+    size = int(k_point.size)
+    p = tuple(int(x-size/2) for x in k_point.pt)
+    cv2.rectangle(img, p, (p[0]+size, p[1]+size), 200, 5)
+    digit_img = img_orig[p[1]:p[1]+size, p[0]:p[0]+size]
+    return digit_img
+
+
+
+
 #Pretty-printing for the Sudoku board
 for l in keypoints_to_board(keypoints):
     print(l)
-
 
 '''
 # Show keypoints

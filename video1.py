@@ -144,6 +144,8 @@ METHODS FOR HOMEWORK
 '''
 
 
+
+
 #Gets the position tuple for a keypoints and returns it
 def get_position(key_point: cv2.KeyPoint) -> tuple:
     size = int(key_point.size)
@@ -215,6 +217,34 @@ def draw_keypoint_grid(list_of_keypoints: list, size: int):
         img = cv2.circle(img, center, 15, (255, 0, 0), 2)
     cv2.imshow("Grid!", img)
     cv2.waitKey()
+
+
+#Matt & Michael 
+#map keypoints x, y to a grid coordinate
+
+#Find interval of x by dividing  the difference of min and max
+maxX = max(k.pt[0] for k in keypoints)
+minX = min(k.pt[0] for k in keypoints)
+intervalX = (maxX-minX)//8
+
+#Find interval of x by dividing  the difference of min and max
+maxY = max(k.pt[1] for k in keypoints)
+minY = min(k.pt[1] for k in keypoints)
+intervalY = (maxY-minY)//8
+
+#function to return grid coor from keypoint x,y
+def pos_abs_to_grid(k_point):
+    return(k_point[0]//intervalX,k_point[1]//intervalY)
+
+#function that takes a list of k and returns an list of coords
+def ks_to_coords():
+    coords = [pos_abs_to_grid(p) for k in keypoints]
+    return coords
+
+#function that replaces k_point[x,y] with the cooridantes
+def ks_replace_coords():
+    for k in keypoints:
+        k.pt = (pos_abs_to_grid(k))
 
 
 '''

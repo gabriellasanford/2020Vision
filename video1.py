@@ -246,7 +246,7 @@ def keypoints_to_board(list_of_points: list):
         desired_size = (28, 28)
         digit_img = cv2.resize(digit_img, desired_size)
         #Classify the digit in the image
-        digit_val = classify_single_img(digit_img)
+        digit_val = int(classify_single_img(digit_img))
         #Get the position of the digit, then convert that to it's row and column position
         x = get_x_position(k)
         y = get_y_position(k)

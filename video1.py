@@ -52,11 +52,11 @@ def classify_imgs(digit_imgs):
         img = cv2.bitwise_not(img)
         predict = knn.classify_digit(classifier, np.array(feature(img)))
         result.append(predict)
-        print(predict)
+        #print(predict)
         #print(img)
-        cv2.imshow("One Digit", img)
-        while cv2.waitKey(1) & 0xFF != ord('n'):
-            continue
+        #cv2.imshow("One Digit", img)
+        #while cv2.waitKey(1) & 0xFF != ord('n'):
+        #    continue
     
     return np.array(result)
     
@@ -207,15 +207,52 @@ def draw_keypoint_grid(list_of_keypoints: list, size: int):
 NOT HOMEWORK ANYMORE
 '''
 
-draw_keypoint_grid(keypoints, 500)
+
+'''
+New homework!
+'''
+#Method for making a 2-d list for a Sudoku board
+#Takes keypoints, classifies the digits puts them in the appropriate spot 
+def keypoints_to_board(list_of_points: list):
+    #Make row and column dictionaries 
+    row_dict = map_keypoints(list_of_points, 10, "y")
+    column_dict = map_keypoints(list_of_points, 10, "x")
+    #Construct the Sudoku board as 2-d list, fill it with -1s as empty values
+    board = [[-1 for col in range(9)] for row in range(9)]
+
+    #Loop through and get the images to classify
+    #Current implementation kinda sucks because of how the classifier takes data :(
+    for k in keypoints:
+        #Code courtesy of Dr. Hochberg for snipping the blobs
+        size = int(k.size)
+        p = tuple(int(x-size/2) for x in k.pt)
+        cv2.rectangle(img, p, (p[0]+size, p[1]+size), 200, 5)
+        digit_img = img_orig[p[1]:p[1]+size, p[0]:p[0]+size]
+        #Now resize that to 28x28 for Anthony's method to get the value of the digit
+        desired_size = (28, 28)
+        digit_img = cv2.resize(digit_img, desired_size)
+        '''Waiting on the method for this right here'''
+        digit_val = get_digit_value(digit_img)
+        #Get the position
+        x = get_x_position(k)
+        y = get_y_position(k)
+        column = column_dict.get(x)
+        row = row_dict.get(y)
+        board[row][column] = digit_val
+
+    return board
 
 
+#Pretty-printing for the Sudoku board
+for l in keypoints_to_board(keypoints):
+    print(l)
 
 
+'''
 # Show keypoints
 cv2.imshow("Keypoints", im_with_keypoints)
 cv2.waitKey(0)
-'''
+
 for k in keypoints:
     size = int(k.size)
     p = tuple(int(x-size/2) for x in k.pt)
@@ -228,6 +265,7 @@ for k in keypoints:
         continue
 cv2.imshow("Blob Rectangles", img)
 '''
+
 '''
 cap = cv2.VideoCapture(0)
 

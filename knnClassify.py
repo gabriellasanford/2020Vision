@@ -134,7 +134,7 @@ def color_transition_array(img):
 def sectional_density(image):
     CELL_WIDTH, CELL_HEIGHT = 4, 4
     pixel_percentages = [0 for i in range((image_size // CELL_WIDTH) * (image_size // CELL_HEIGHT))]
-    total_black_pixels, count = 0, 0
+    total_black_pixels, count = 0.0001, 0
 
     for corner_y in range(0, (image_size - CELL_HEIGHT + 1), CELL_HEIGHT):
         for corner_x in range(0, (image_size - CELL_WIDTH + 1), CELL_WIDTH):

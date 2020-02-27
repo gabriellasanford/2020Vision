@@ -235,6 +235,7 @@ def keypoints_to_board(list_of_points: list):
     board = [[-1 for col in range(9)] for row in range(9)]
 
     #Loop through and get the images to classify
+    #Classify them, and put them in their spot on the board
     for k in keypoints:
         #Code courtesy of Dr. Hochberg for snipping the blobs
         size = int(k.size)
@@ -244,8 +245,8 @@ def keypoints_to_board(list_of_points: list):
         #Now resize that to 28x28 for Anthony's method to get the value of the digit
         desired_size = (28, 28)
         digit_img = cv2.resize(digit_img, desired_size)
-        '''Waiting on the method for this right here'''
-        digit_val = 3
+        #Classify the digit in the image
+        digit_val = classify_single_img(digit_img)
         #Get the position of the digit, then convert that to it's row and column position
         x = get_x_position(k)
         y = get_y_position(k)

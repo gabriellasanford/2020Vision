@@ -61,6 +61,20 @@ def classify_imgs(digit_imgs):
     return np.array(result)
     
 
+def classify_single_img(digit_img):
+    feature = knn.slantiness
+
+    digit_img = cv2.resize(digit_img, (28,28))
+    
+    global classifier
+    if classifier is None:
+        classifier = make_classifier(feature)
+
+    digit_img = cv2.bitwise_not(digit_img)
+    prediction = knn.classify_digit(classifier, np.array(feature(digit_img)))
+
+    return prediction    
+
 img_orig = cv2.imread("sudoku.png", cv2.IMREAD_GRAYSCALE)
 
 # Show the original image

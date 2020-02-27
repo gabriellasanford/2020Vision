@@ -6,6 +6,8 @@ WIDTH = 900
 HEIGHT = 900
 BORDER = 10
 image_size = 28
+colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 0), (255, 0, 255), \
+          (0, 255, 255), (100, 100, 255), (255, 100, 255), (100, 255, 100), (255, 100, 100)]
 
 ###
 ### Features
@@ -85,7 +87,9 @@ digit_map = make_digit_map(data)
 feature_map = build_feature_map(digit_map, [top_bottom_balance])
 train = []
 labels = []
-for digit in range(2):
+print(feature_map)
+for digit in range(10):
+    print(digit, len(feature_map[digit]))
     for f in feature_map[digit]:
         train.append(f)
         labels.append(digit)
@@ -94,7 +98,7 @@ for digit in range(2):
 svm = cv.ml.SVM_create()
 svm.setType(cv.ml.SVM_C_SVC)
 svm.setKernel(cv.ml.SVM_LINEAR)
-svm.setKernel(cv.ml.SVM_RBF)
+#svm.setKernel(cv.ml.SVM_RBF)
 svm.setTermCriteria((cv.TERM_CRITERIA_MAX_ITER, 100, 1e-6))
 svm.train(np.array(train).astype(np.float32), cv.ml.ROW_SAMPLE, np.array(labels))
 
@@ -106,18 +110,18 @@ image = np.ones((HEIGHT, WIDTH, 3), dtype=np.uint8)*255
 # Show the training data
 for i in range(len(train)):
     y, x = int(train[i][1] * (HEIGHT-BORDER) / maxy) - BORDER, int(train[i][0] * (WIDTH-BORDER) / maxx) - BORDER
-    color = (255, 0, 0) if labels[i] == 0 else (0, 0, 255)
+    color = colors[labels[i]]
     cv.circle(image, (x, y), 5, color, -1)
 
-"""
+
 for i in range(0, image.shape[0], 2):
     for j in range(0, image.shape[1], 2):
-        tx = (j + BORDER)*maxx / (WIDTH - BORDER)
-        ty = (i + BORDER)*maxy / (WIDTH - BORDER)
+        tx = (j + BORDER)*maxx*1.0 / (WIDTH - BORDER)
+        ty = (i + BORDER)*maxy*1.0 / (WIDTH - BORDER)
         sampleMat = np.matrix([[tx, ty]], dtype=np.float32)
-        response = svm.predict(sampleMat)[1]
-        image[i,j] = (255, 0, 0) if response == 0 else (0, 0, 255)
-"""
+        response = int(svm.predict(sampleMat)[1][0])
+        image[i,j] = colors[response]
+
 cv.imshow('SVM Simple Example', image) # show it to the user
 cv.waitKey()
 

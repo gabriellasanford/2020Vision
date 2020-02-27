@@ -53,14 +53,28 @@ def classify_imgs(digit_imgs):
         img = cv2.bitwise_not(img)
         predict = knn.classify_digit(classifier, np.array(feature(img)))
         result.append(predict)
-        print(predict)
+        #print(predict)
         #print(img)
-        cv2.imshow("One Digit", img)
-        while cv2.waitKey(1) & 0xFF != ord('n'):
-            continue
+        #cv2.imshow("One Digit", img)
+        #while cv2.waitKey(1) & 0xFF != ord('n'):
+        #    continue
     
     return np.array(result)
     
+
+def classify_single_img(digit_img):
+    feature = knn.slantiness
+
+    digit_img = cv2.resize(digit_img, (28,28))
+    
+    global classifier
+    if classifier is None:
+        classifier = make_classifier(feature)
+
+    digit_img = cv2.bitwise_not(digit_img)
+    prediction = knn.classify_digit(classifier, np.array(feature(digit_img)))
+
+    return prediction    
 
 img_orig = cv2.imread("sudoku.png", cv2.IMREAD_GRAYSCALE)
 
@@ -129,6 +143,8 @@ im_with_keypoints = cv2.drawKeypoints(img, keypoints, None, (255,0,255),\
 '''
 METHODS FOR HOMEWORK
 '''
+
+
 
 
 #Gets the position tuple for a keypoints and returns it
@@ -204,19 +220,85 @@ def draw_keypoint_grid(list_of_keypoints: list, size: int):
     cv2.waitKey()
 
 
+#Matt & Michael 
+#map keypoints x, y to a grid coordinate
+
+#Find interval of x by dividing  the difference of min and max
+maxX = max(k.pt[0] for k in keypoints)
+minX = min(k.pt[0] for k in keypoints)
+intervalX = (maxX-minX)//8
+
+#Find interval of x by dividing  the difference of min and max
+maxY = max(k.pt[1] for k in keypoints)
+minY = min(k.pt[1] for k in keypoints)
+intervalY = (maxY-minY)//8
+
+#function to return grid coor from keypoint x,y
+def pos_abs_to_grid(k_point):
+    return(k_point[0]//intervalX,k_point[1]//intervalY)
+
+#function that takes a list of k and returns an list of coords
+def ks_to_coords():
+    coords = [pos_abs_to_grid(p) for k in keypoints]
+    return coords
+
+#function that replaces k_point[x,y] with the cooridantes
+def ks_replace_coords():
+    for k in keypoints:
+        k.pt = (pos_abs_to_grid(k))
+
+
 '''
 NOT HOMEWORK ANYMORE
 '''
 
-draw_keypoint_grid(keypoints, 500)
+
+'''
+New homework!
+'''
+#Method for making a 2-d list for a Sudoku board
+#Takes keypoints, classifies the digits puts them in the appropriate spot 
+def keypoints_to_board(list_of_points: list):
+    #Make row and column dictionaries 
+    row_dict = map_keypoints(list_of_points, 10, "y")
+    column_dict = map_keypoints(list_of_points, 10, "x")
+    #Construct the Sudoku board as 2-d list, fill it with -1s as empty values
+    board = [[-1 for col in range(9)] for row in range(9)]
+
+    #Loop through and get the images to classify
+    #Classify them, and put them in their spot on the board
+    for k in keypoints:
+        #Code courtesy of Dr. Hochberg for snipping the blobs
+        size = int(k.size)
+        p = tuple(int(x-size/2) for x in k.pt)
+        cv2.rectangle(img, p, (p[0]+size, p[1]+size), 200, 5)
+        digit_img = img_orig[p[1]:p[1]+size, p[0]:p[0]+size]
+        #Now resize that to 28x28 for Anthony's method to get the value of the digit
+        desired_size = (28, 28)
+        digit_img = cv2.resize(digit_img, desired_size)
+        #Classify the digit in the image
+        digit_val = int(classify_single_img(digit_img))
+        #Get the position of the digit, then convert that to it's row and column position
+        x = get_x_position(k)
+        y = get_y_position(k)
+        column = column_dict.get(x)
+        row = row_dict.get(y)
+        #Add the value of the digit to the Sudoku board
+        board[row][column] = digit_val
+
+    return board
 
 
+#Pretty-printing for the Sudoku board
+for l in keypoints_to_board(keypoints):
+    print(l)
 
 
+'''
 # Show keypoints
 cv2.imshow("Keypoints", im_with_keypoints)
 cv2.waitKey(0)
-'''
+
 for k in keypoints:
     size = int(k.size)
     p = tuple(int(x-size/2) for x in k.pt)
@@ -229,6 +311,7 @@ for k in keypoints:
         continue
 cv2.imshow("Blob Rectangles", img)
 '''
+
 '''
 cap = cv2.VideoCapture(0)
 

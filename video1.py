@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
+import sys
 import knnClassify as knn
 
 # stores a trained knnClassify. Initiated as None to avoid
@@ -154,9 +155,9 @@ def within_spread(a: int, b: int, spread: int) -> bool:
 #Returns a dictionary mapping the keypoints' x/y values to their column/row position
 def map_keypoints(list_of_points: list, spread: int, axis: str) -> dict:
     #Sort the keypoints by (x, y) position
-    if axis is "x":
+    if axis == "x":
         list_of_points.sort(key=get_x_position)
-    elif axis is "y":
+    elif axis == "y":
         list_of_points.sort(key=get_y_position)
     #Make dictionaries to hold row and column mappings
     dictionary = dict()
@@ -165,9 +166,9 @@ def map_keypoints(list_of_points: list, spread: int, axis: str) -> dict:
     row_or_column = -1
     for k in list_of_points:
         position = get_position(k)
-        if axis is "x":
+        if axis == "x":
             current_val = position[0]
-        elif axis is "y":
+        elif axis == "y":
             current_val = position[1]
         #Now check the current values against the past values, if they're different *enough* then 
         #update our row or column position

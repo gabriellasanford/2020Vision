@@ -201,7 +201,7 @@ def convex_hull(img):
         cv2.drawContours(hull_img, hull, i, color_hull, 1, 8)
     plt.imshow(hull_img, cmap=plt.cm.binary)
     plt.show()
-    print(hull)
+    #print(hull)
     # Return the convex hull list.
     return hull
 
@@ -497,7 +497,7 @@ test_digit_map = make_digit_map(test_data)
 all_features = [waviness, hv_weights, top_bottom_balance, combineWavy,\
                 vertical_lines, sectional_density, slantiness,\
                 edginess, Sobelness]
-all_features = [waviness]
+all_features = []
 
 for f in all_features:
     testKnn(f)

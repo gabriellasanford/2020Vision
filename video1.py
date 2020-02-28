@@ -5,12 +5,62 @@ import sys
 import knnClassify as knn
 import math
 
+'''
+ADMIN BLOCK
+AKA Dr. Hochberg's stuff
+'''
+
 # stores a trained knnClassify. Initiated as None to avoid
 # unnecessary overhead if not used
 classifier = None
 
+img_orig = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
 
+# Show the original image
+# This is a matplotlib display, so we must close the window to move forward
+#plt.imshow(255-img_orig, cmap=plt.cm.binary)
+#plt.show()
+
+element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7), (3, 3))
+img = 255-cv2.dilate(255-img_orig, element)
+# This is a matplotlib display, so we must close the window to move forward
+#plt.imshow(255-img, cmap=plt.cm.binary)
+#plt.show()
+
+# Setup SimpleBlobDetector parameters.
+params = cv2.SimpleBlobDetector_Params()
+ 
+# Filter by Inertia
+#params.filterByInertia = True
+#params.minInertiaRatio = 0.2
+
+# Set up the detector with default parameters.
+detector = cv2.SimpleBlobDetector_create(params)
+ 
+# Detect blobs.
+keypoints = detector.detect(img)
+#print([(k.pt, k.size) for k in keypoints])
+
+# Draw detected blobs as red circles.
+# cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the
+# size of the circle corresponds to the size of blob
+im_with_keypoints = cv2.drawKeypoints(img, keypoints, None, (255,0,255),\
+                                     cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+###
+### Here we start using imshow() --- the native OpenCV image viewer
+### These windows do not lock up the main thread
+###
+'''
+End of admin block
+'''
+
+
+'''
+IMAGE-TO-BOARD block
+'''
 def make_classifier(feature):
+    print("Training, please wait. . .")
     training_map = {}
 
     fonts = [cv2.FONT_HERSHEY_SIMPLEX,\
@@ -32,11 +82,9 @@ def make_classifier(feature):
                 continue"""
 
     classifier = knn.make_trained_knn(feature, training_map)
-
     knn.test_existing_knn(knn.slantiness, classifier, training_map)
-
-
     return classifier
+
 
 # Sri, Anthony, Eniola
 # takes an np.array of digit images and returns an np.array of their respective digits
@@ -77,76 +125,6 @@ def classify_single_img(digit_img):
 
     return prediction    
 
-img_orig = cv2.imread("sudoku.png", cv2.IMREAD_GRAYSCALE)
-
-# Show the original image
-# This is a matplotlib display, so we must close the window to move forward
-plt.imshow(255-img_orig, cmap=plt.cm.binary)
-plt.show()
-
-element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7), (3, 3))
-img = 255-cv2.dilate(255-img_orig, element)
-# This is a matplotlib display, so we must close the window to move forward
-plt.imshow(255-img, cmap=plt.cm.binary)
-plt.show()
-
-# Setup SimpleBlobDetector parameters.
-params = cv2.SimpleBlobDetector_Params()
- 
-# Filter by Inertia
-#params.filterByInertia = True
-#params.minInertiaRatio = 0.2
-
-# Set up the detector with default parameters.
-detector = cv2.SimpleBlobDetector_create(params)
- 
-# Detect blobs.
-keypoints = detector.detect(img)
-print([(k.pt, k.size) for k in keypoints])
-
-
-# deduce what sudoku cell each keypoint is in.
-# returns a list of tuples (i, j) where is i is
-# the row index and j is the column index.
-def duy_paul_gabriella_keypoints_to_cells(keypoint_list):
-    left = sys.maxsize
-    right = 0
-    top = sys.maxsize
-    bottom = 0
-    cells = []
-    for a_keypoint in keypoint_list:
-        left = min(left, a_keypoint.pt[0])
-        right = max(right, a_keypoint.pt[0])
-        top = min(top, a_keypoint.pt[1])
-        bottom = max(bottom, a_keypoint.pt[1])
-    # distance from one column center to the next
-    x_bucket_size = (right - left) / 8
-    # distance from one row center to the next
-    y_bucket_size = (bottom - top) / 8
-    for a_keypoint in keypoint_list:
-        x, y = a_keypoint.pt
-        j = round((x - left) / x_bucket_size)
-        i = round((y - top) / y_bucket_size)
-        cells.append((i, j))
-    return cells
-
-
-# Draw detected blobs as red circles.
-# cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the
-# size of the circle corresponds to the size of blob
-im_with_keypoints = cv2.drawKeypoints(img, keypoints, None, (255,0,255),\
-                                     cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-###
-### Here we start using imshow() --- the native OpenCV image viewer
-### These windows do not lock up the main thread
-###
-
-'''
-METHODS FOR HOMEWORK
-'''
-
-
-
 
 #Gets the position tuple for a keypoints and returns it
 def get_position(key_point: cv2.KeyPoint) -> tuple:
@@ -154,17 +132,21 @@ def get_position(key_point: cv2.KeyPoint) -> tuple:
     position = tuple(int(x-size/2) for x in key_point.pt)
     return position
 
+
 #Returns the y position of the keypoint
 def get_y_position(key_point: cv2.KeyPoint) -> int:
     return get_position(key_point)[1]
+
 
 #Returns the x position of the keypoint
 def get_x_position(key_point: cv2.KeyPoint) -> int:
     return get_position(key_point)[0]
 
+
 #Checks to see if two values are within a particular range of each other
 def within_spread(a: int, b: int, spread: int) -> bool:
     return abs(a - b) <= spread
+
 
 #William's method for getting row/column position of keypoints
 #Takes a list of keypoints, a spread for variance in keypoint location, and "x" or "y" 
@@ -205,20 +187,131 @@ def map_keypoints(list_of_points: list, spread: int, axis: str) -> dict:
     return dictionary
 
 
-#Now write a method that displays circles in the same spot as they are, using map_keypoints
-def draw_keypoint_grid(list_of_keypoints: list, size: int):
-    x_dictionary = map_keypoints(list_of_keypoints, 10, "x")
-    y_dictionary = map_keypoints(list_of_keypoints, 10, "y")
-    img = 255 * np.ones(shape=[size, size, 3], dtype=np.uint8)
-    spacing = size//9
-    buffer = 15
-    for kp in list_of_keypoints:
-        column = x_dictionary.get(get_x_position(kp))
-        row = y_dictionary.get(get_y_position(kp))
-        center = (column*spacing + buffer, row*spacing + buffer)
-        img = cv2.circle(img, center, 15, (255, 0, 0), 2)
-    cv2.imshow("Grid!", img)
+#Method for making a 2-d list for a Sudoku board
+#Takes keypoints, classifies the digits puts them in the appropriate spot 
+def keypoints_to_board(list_of_points: list, x_spread: int, y_spread: int):
+    #Make row and column dictionaries 
+    row_dict = map_keypoints(list_of_points, x_spread, "y")
+    column_dict = map_keypoints(list_of_points, y_spread, "x")
+    #Keep for now until this works with more than one board
+    '''
+    print("rows:")
+    print(row_dict)
+    print("columns:")
+    print(column_dict)
+    '''
+    #Construct the Sudoku board as 2-d list, fill it with -1s as empty values
+    board = [[0 for col in range(9)] for row in range(9)]
+
+    #Loop through and get the images to classify
+    #Classify them, and put them in their spot on the board
+    for k in keypoints:
+        #Get the image of the digit from the keypoint
+        digit_img = get_digit_image(k)
+        #Classify the digit in the image
+        digit_val = int(classify_single_img(digit_img))
+        #Get the position of the digit, then convert that to it's row and column position
+
+        #This is where the bug is, 
+         #   which is odd since the x,y coords are coming from the same function
+          #  as the one that made the dictionary in the first place...
+
+        x = get_x_position(k)
+        #print("x: " + str(x))
+        y = get_y_position(k)
+        #print("y:" + str(y))
+        column = column_dict.get(x)
+        #print("col: " + str(column))
+        row = row_dict.get(y)
+        #print("row: " + str(row))
+        
+        for key in column_dict.keys():
+            x = get_x_position(k)
+            if within_spread(x, key, 15):
+                #print("we out here")
+                column = column_dict.get(key)
+                break
+
+        for key in row_dict.keys():
+            y = get_y_position(k)
+            #print("Inner y: " + str(y))
+            #print(key)
+            if within_spread(y, key, 15):
+                row = row_dict.get(key)
+                #print("we out here x2")
+                break
+        #print("col: " + str(column))
+        #print("row: "+ str(row))
+        #Add the value of the digit to the Sudoku board
+        board[row][column] = digit_val
+
+    return board
+
+
+#Returns the digit image of a keypoint from a Sudoku board
+#Code courtesy of Dr. Hochberg for snipping the blobs
+def get_digit_image(k_point: cv2.KeyPoint) -> np.array:
+    size = int(k_point.size)
+    p = tuple(int(x-size/2) for x in k_point.pt)
+    cv2.rectangle(img, p, (p[0]+size, p[1]+size), 200, 5)
+    digit_img = img_orig[p[1]:p[1]+size, p[0]:p[0]+size]
+    return digit_img
+
+
+#Takes an image of a Sudoku board, returns the Sudoku board as a 2-d list
+def sudoku_image_to_board(image: np.array):
+    dimensions = image.shape
+    #Divide by 18 since that's 9 * 2, which is each row/column's half height/width 
+    y_spread = dimensions[0] // 18
+    x_spread = dimensions[1] // 18
+    element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7), (3, 3))
+    #So we can dilate ourselves into a problem...
+    img = 255-cv2.dilate(255-image, element)
+    cv2.imshow("test", img)
     cv2.waitKey()
+    # Setup SimpleBlobDetector parameters.
+    params = cv2.SimpleBlobDetector_Params()
+    # Set up the detector with default parameters.
+    detector = cv2.SimpleBlobDetector_create(params)
+    # Detect blobs.
+    keypoints = detector.detect(img)
+    #Make the board 
+    board = keypoints_to_board(keypoints, x_spread, y_spread)
+    return board
+
+'''
+End of image-to-board block
+'''
+
+
+'''
+GROUP SUBMISSIONS
+'''
+
+# deduce what sudoku cell each keypoint is in.
+# returns a list of tuples (i, j) where is i is
+# the row index and j is the column index.
+def duy_paul_gabriella_keypoints_to_cells(keypoint_list):
+    left = sys.maxsize
+    right = 0
+    top = sys.maxsize
+    bottom = 0
+    cells = []
+    for a_keypoint in keypoint_list:
+        left = min(left, a_keypoint.pt[0])
+        right = max(right, a_keypoint.pt[0])
+        top = min(top, a_keypoint.pt[1])
+        bottom = max(bottom, a_keypoint.pt[1])
+    # distance from one column center to the next
+    x_bucket_size = (right - left) / 8
+    # distance from one row center to the next
+    y_bucket_size = (bottom - top) / 8
+    for a_keypoint in keypoint_list:
+        x, y = a_keypoint.pt
+        j = round((x - left) / x_bucket_size)
+        i = round((y - top) / y_bucket_size)
+        cells.append((i, j))
+    return cells
 
 
 #Matt & Michael 
@@ -240,7 +333,7 @@ def pos_abs_to_grid(k_point):
 
 #function that takes a list of k and returns an list of coords
 def ks_to_coords():
-    coords = [pos_abs_to_grid(p) for k in keypoints]
+    coords = [pos_abs_to_grid(k.pt) for k in keypoints]
     return coords
 
 #function that replaces k_point[x,y] with the cooridantes
@@ -281,51 +374,69 @@ testMapping((keypointsToCells(img,keypoints)))
 
 
 '''
-NOT HOMEWORK ANYMORE
+End of group submissions
 '''
 
 
+
 '''
-New homework!
+BLOCK FOR TESTING STUFF
+Please put a #comment above the group blocks quickly explaining what they're used for.
+The green will stand out and make it easier to find stuff.
 '''
-#Method for making a 2-d list for a Sudoku board
-#Takes keypoints, classifies the digits puts them in the appropriate spot 
-def keypoints_to_board(list_of_points: list):
-    #Make row and column dictionaries 
-    row_dict = map_keypoints(list_of_points, 10, "y")
-    column_dict = map_keypoints(list_of_points, 10, "x")
-    #Construct the Sudoku board as 2-d list, fill it with -1s as empty values
-    board = [[-1 for col in range(9)] for row in range(9)]
+#Runs through Sudoku boards in images directory, 
+# prints the board and displays the original image
 
-    #Loop through and get the images to classify
-    #Classify them, and put them in their spot on the board
-    for k in keypoints:
-        #Code courtesy of Dr. Hochberg for snipping the blobs
-        size = int(k.size)
-        p = tuple(int(x-size/2) for x in k.pt)
-        cv2.rectangle(img, p, (p[0]+size, p[1]+size), 200, 5)
-        digit_img = img_orig[p[1]:p[1]+size, p[0]:p[0]+size]
-        #Now resize that to 28x28 for Anthony's method to get the value of the digit
-        desired_size = (28, 28)
-        digit_img = cv2.resize(digit_img, desired_size)
-        #Classify the digit in the image
-        digit_val = int(classify_single_img(digit_img))
-        #Get the position of the digit, then convert that to it's row and column position
-        x = get_x_position(k)
-        y = get_y_position(k)
-        column = column_dict.get(x)
-        row = row_dict.get(y)
-        #Add the value of the digit to the Sudoku board
-        board[row][column] = digit_val
+#Currently doesn't work due to resizing errors and None-type list errors.
+#Seems to be keypoint related, perhaps the dilation is messing it up.
+'''
+#Quick loop for testing against several Sudoku boards
+#num is how many boards to check
+def test_sudoku_images(num: int):
+    for i in range(num):
+        path = "images/sudoku" + str(i) + ".png"
+        img_orig = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        board = sudoku_image_to_board(img_orig)
+        pretty_print_board(board)
+        cv2.imshow(path, img_orig)
+        while cv2.waitKey(1) & 0xFF != ord('n'):
+            continue
+'''
 
-    return board
-
+#Prints out the Sudoku board nicely 
 
 #Pretty-printing for the Sudoku board
-for l in keypoints_to_board(keypoints):
-    print(l)
+def pretty_print_board(board):
+    for l in board:
+        print(l)
+
+img_orig = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
+cv2.imshow("Here's a picture...", img_orig)
+while cv2.waitKey(1) & 0xFF is not ord('n'):
+    continue
+pretty_print_board(sudoku_image_to_board(img_orig))
 
 
+#Displays circles according to where they should (hopefully) be in a grid
+'''
+#Now write a method that displays circles in the same spot as they are, using map_keypoints
+def draw_keypoint_grid(list_of_keypoints: list, size: int):
+    x_dictionary = map_keypoints(list_of_keypoints, 10, "x")
+    y_dictionary = map_keypoints(list_of_keypoints, 10, "y")
+    img = 255 * np.ones(shape=[size, size, 3], dtype=np.uint8)
+    spacing = size//9
+    buffer = 15
+    for kp in list_of_keypoints:
+        column = x_dictionary.get(get_x_position(kp))
+        row = y_dictionary.get(get_y_position(kp))
+        center = (column*spacing + buffer, row*spacing + buffer)
+        img = cv2.circle(img, center, 15, (255, 0, 0), 2)
+    cv2.imshow("Grid!", img)
+    cv2.waitKey()
+'''
+
+
+#Shows keypoints, then the keypoint image snips
 '''
 # Show keypoints
 cv2.imshow("Keypoints", im_with_keypoints)
@@ -344,6 +455,8 @@ for k in keypoints:
 cv2.imshow("Blob Rectangles", img)
 '''
 
+
+#Video capture from webcam
 '''
 cap = cv2.VideoCapture(0)
 
@@ -357,9 +470,19 @@ while(True):
     cv2.imshow('frame',gray)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+#cap.release()
 
 '''
+
+
+'''
+End of testing block
+'''
+
+
+'''
+Clean up
+'''
 # When everything done, release the capture
-#cap.release()
 cv2.destroyAllWindows()
 

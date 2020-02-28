@@ -146,7 +146,7 @@ for f in all_features:
     features = [f]
     
     # train
-    data = read_images("data/mnist_medium.csv")
+    data = read_images("data/mnist_medium_train.csv")
     digit_map = make_digit_map(data)
     feature_map = build_feature_map(digit_map, features)
     com = find_coms(feature_map)

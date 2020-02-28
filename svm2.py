@@ -333,32 +333,35 @@ def testAMD(labels, pred):
 # Select the set of features
 features = [waviness, slantiness]
 
-# Set up training data
-print("Extracting Features.", end=" ")
-start = time.time()
-data = read_images("data/mnist_train.csv")
-digit_map = make_digit_map(data)
-feature_map = build_feature_map(digit_map, features)
-train = []
-train_labels = []
-#print(feature_map)
-for digit in range(10):
-    #print(digit, len(feature_map[digit]))
-    for f in feature_map[digit]:
-        train.append(f)
-        train_labels.append(digit)
-print(int(time.time() - start), "seconds.")
+# # Set up training data
+# print("Extracting Features.", end=" ")
+# start = time.time()
+# data = read_images("data/mnist_train.csv")
+# digit_map = make_digit_map(data)
+# feature_map = build_feature_map(digit_map, features)
+# train = []
+# train_labels = []
+# #print(feature_map)
+# for digit in range(10):
+#     #print(digit, len(feature_map[digit]))
+#     for f in feature_map[digit]:
+#         train.append(f)
+#         train_labels.append(digit)
+# print(int(time.time() - start), "seconds.")
 
-# Train the SVM
-print("Beginning training.", end=" ")
-start = time.time()
-svm = cv2.ml.SVM_create()
-#svm.setType(cv2.ml.SVM_C_SVC)
-#svm.setKernel(cv2.ml.SVM_LINEAR)
-svm.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-6))
-#svm.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(train_labels))
-svm.trainAuto(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(train_labels))
-print(int(time.time() - start), "seconds.")
+# # Train the SVM
+# print("Beginning training.", end=" ")
+# start = time.time()
+# svm = cv2.ml.SVM_create()
+# #svm.setType(cv2.ml.SVM_C_SVC)
+# #svm.setKernel(cv2.ml.SVM_LINEAR)
+# svm.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-6))
+# #svm.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(train_labels))
+# svm.trainAuto(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(train_labels))
+# print(int(time.time() - start), "seconds.")
+
+# Read SVM from file (comment out if training)
+svm = cv2.ml_SVM.load("data/wav-slant-lrg-lrg.svm")
 
 # Test the SVM
 print("Beginning testing.", end=" ")

@@ -332,7 +332,7 @@ def pos_abs_to_grid(k_point):
 
 #function that takes a list of k and returns an list of coords
 def ks_to_coords():
-    coords = [pos_abs_to_grid(p) for k in keypoints]
+    coords = [pos_abs_to_grid(k.pt) for k in keypoints]
     return coords
 
 #function that replaces k_point[x,y] with the cooridantes

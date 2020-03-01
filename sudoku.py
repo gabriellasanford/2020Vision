@@ -5,6 +5,7 @@ import math
 from os import listdir
 from os.path import isfile, join
 import time
+import random
 
 class Sudoku:
     def __init__(self, dim = 9):
@@ -253,6 +254,25 @@ def count_clues(sudoku_board):
                 clues += 1
 
     return clues
+
+def reduce_clues(sudoku_board, target_clues):
+    clues = count_clues(sudoku_board)
+    if clues <= target_clues:
+        return
+
+    clue_cells = []
+    for row in range(len(sudoku_board)):
+        for col in range(len(sudoku_board[0])):
+            if sudoku_board[row][col] != 0:
+                clue_cells.append((row, col))
+
+    random.shuffle(clue_cells)
+    num_clues_to_cancel = clues - target_clues
+
+    for i in range(num_clues_to_cancel):
+        clue_to_cancel = clue_cells[i]
+        sudoku_board[clue_to_cancel[0]][clue_to_cancel[1]] = 0
+
 
 # Reads sudoku data from txt files and solves them.
 # Times the tests.

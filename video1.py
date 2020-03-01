@@ -3,6 +3,7 @@ import cv2
 from matplotlib import pyplot as plt
 import sys
 import knnClassify as knn
+import math
 
 '''
 ADMIN BLOCK
@@ -339,6 +340,38 @@ def ks_to_coords():
 def ks_replace_coords():
     for k in keypoints:
         k.pt = (pos_abs_to_grid(k))
+
+
+# Amelia, Michael, Minh
+# Maps keypoint to cell
+# returns a list of tuples
+def keypointsToCells(img, keypoints):
+    height = len(img)
+    width = len(img[0])
+    cells = []
+    for point in keypoints:
+        cells.append(( math.floor((point.pt[1]/width)*9), math.floor((point.pt[0]/height)*9)))
+        
+    return cells
+
+# Amelia, Michael, Minh
+# Prints out visual grid in terminal
+# to see if keypoint mapping is correct
+def testMapping(cells):
+    grid = np.zeros((9,9))
+    for c in cells:
+        grid[c[0]][c[1]] = 1
+    for row in grid:
+        for index in row:
+            if index == 0:
+                print("\033[0;30;47mO", end = ", ")
+            if index == 1:
+                print("\033[0;31;47mX\033[0;30;47m", end = ", ")
+        print("\033[39;49m")
+    print()
+    
+testMapping((keypointsToCells(img,keypoints)))
+
 
 '''
 End of group submissions

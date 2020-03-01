@@ -245,6 +245,15 @@ def solve_sudoku(sudoku_board):
 
     return sudoku.get_matrix()
 
+def count_clues(sudoku_board):
+    clues = 0
+    for row in sudoku_board:
+        for cell in row:
+            if cell != 0:
+                clues += 1
+
+    return clues
+
 # Reads sudoku data from txt files and solves them.
 # Times the tests.
 # Sudoku data obtained from the University of Vaasa's Sudoku Research Page (http://lipas.uwasa.fi/~timan/sudoku/)
@@ -267,6 +276,7 @@ def run_tests():
 
     for index, board in enumerate(boards):
         print(sudoku_files[index])
+        print("Clues: %d" % (count_clues(board)))
         curr_start_time = time.time()
         solve_sudoku(board)
         time_taken = time.time() - curr_start_time

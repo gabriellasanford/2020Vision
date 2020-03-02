@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import sys
 import knnClassify as knn
 import math
-
+import methods as meth
 '''
 ADMIN BLOCK
 AKA Dr. Hochberg's stuff
@@ -14,7 +14,7 @@ AKA Dr. Hochberg's stuff
 # unnecessary overhead if not used
 classifier = None
 
-img_orig = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
+img_orig = cv2.imread("images/sudoku1.png", cv2.IMREAD_GRAYSCALE)
 
 # Show the original image
 # This is a matplotlib display, so we must close the window to move forward
@@ -82,14 +82,14 @@ def make_classifier(feature):
                 continue"""
 
     classifier = knn.make_trained_knn(feature, training_map)
-    knn.test_existing_knn(knn.slantiness, classifier, training_map)
+    knn.test_existing_knn(meth.slantiness, classifier, training_map)
     return classifier
 
 
 # Sri, Anthony, Eniola
 # takes an np.array of digit images and returns an np.array of their respective digits
 def classify_imgs(digit_imgs):
-    feature = knn.slantiness
+    feature = meth.slantiness
     
     digit_imgs = np.array(list(map(lambda i: cv2.resize(i, (28, 28)), digit_imgs)))
     global classifier
@@ -112,7 +112,7 @@ def classify_imgs(digit_imgs):
     
 
 def classify_single_img(digit_img):
-    feature = knn.slantiness
+    feature = meth.slantiness
 
     digit_img = cv2.resize(digit_img, (28,28))
     
@@ -243,6 +243,8 @@ def keypoints_to_board(list_of_points: list, x_spread: int, y_spread: int):
         #print("col: " + str(column))
         #print("row: "+ str(row))
         #Add the value of the digit to the Sudoku board
+        if row == None : row = 0        # Catch error
+        if column == None : column = 0  # Catch error
         board[row][column] = digit_val
 
     return board
@@ -484,5 +486,6 @@ End of testing block
 Clean up
 '''
 # When everything done, release the capture
+cv2.waitKey()
 cv2.destroyAllWindows()
 

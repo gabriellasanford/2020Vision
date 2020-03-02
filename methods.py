@@ -424,3 +424,9 @@ def convex_hull(img: np.array) -> list:
             return_points.append(item)
     # Return the convex hull list.
     return return_points
+
+
+# Accepts a filename as a string, returns the support vector machine read from
+# that file.
+def load_svm(filename):
+    return cv2.ml.SVM_load(filename)

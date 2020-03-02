@@ -2,7 +2,7 @@ import cv2
 from matplotlib import pyplot as plt
 import numpy as np
 import time
-import methods
+import methods as meth
 
 WIDTH = 900
 HEIGHT = 900
@@ -81,7 +81,7 @@ def testAMD(labels, pred):
     TRAINING AND TESTING
 """
 # Select the set of features
-features = [methods.waviness, methods.slantiness]
+features = [meth.waviness, meth.slantiness]
 
 
 # Set up training data
@@ -111,7 +111,6 @@ svm.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-6))
 #svm.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(train_labels))
 svm.trainAuto(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(train_labels))
 print(int(time.time() - start), "seconds.")
-
 
 # Test the SVM
 print("Beginning testing.", end=" ")

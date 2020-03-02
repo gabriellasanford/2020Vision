@@ -67,11 +67,7 @@ def testAMD(labels, pred):
             countr += 1
         else:
             countw += 1
-            #plt.imshow(255-test_images[i], cmap=plt.cm.binary)
-            #plt.show()
-            print(labels[i], pred[i])
-            print(test_images[i])
-            
+            print(labels[i], pred[i], end="\t")
             #cv2.imshow("Incorrect", np.array(test_images[i], dtype=np.uint8))
             #cv2.waitKey()
     return countr/(countr +  countw)
@@ -111,6 +107,7 @@ svm.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-6))
 #svm.train(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(train_labels))
 svm.trainAuto(np.array(train).astype(np.float32), cv2.ml.ROW_SAMPLE, np.array(train_labels))
 print(int(time.time() - start), "seconds.")
+
 
 # Test the SVM
 print("Beginning testing.", end=" ")

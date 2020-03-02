@@ -166,6 +166,7 @@ def sectional_density(image):
                         total_black_pixels += 1
             count += 1
     # Convert to percentages.
+    if total_black_pixels == 0: return [1]*49 # No image here, don't crash
     for i in range(len(pixel_percentages)):
         pixel_percentages[i] = 100.0*pixel_percentages[i]/total_black_pixels
 

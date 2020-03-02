@@ -228,7 +228,7 @@ def make_trained_knn(feature, training_map):
 
     return knn
     
-training_data = read_images("data/mnist_medium.csv")
+training_data = read_images("data/mnist_medium_train.csv")
 training_digit_map = make_digit_map(training_data)
 
 test_data = read_images("data/mnist_medium_test.csv")

@@ -1,6 +1,17 @@
 import numpy as np
 import cv2
 
+"""
+    FEATURE FUNCTIONS
+"""
+
+#Will, Gabriella, Amelia
+#hv_weights on canny-edged image
+#Results: 79/57
+def hv_weights_on_canny(img):
+    converted_img = np.uint8(img)
+    edges = cv2.Canny(converted_img,230,250)
+    return hv_weights(edges)
 
 # Number of b/w transitions along every other row
 # 14 dimensions
@@ -9,6 +20,15 @@ def waviness(img):
     img2 = img.copy()
     img2[img2 > 0] = 255 # Any pixel not white becomes black
     return np.sum(abs(img2[:,1:] - img2[:,:-1])/255, axis=1)[::2].tolist()
+
+# Number of b/w transitions along every other row, and every other column
+# 28 dimensions
+# Rob Hochberg
+def hv_wavy(img):
+    img2 = img.copy()
+    img2[img2 > 0] = 255 # Any pixel not white becomes black
+    return np.sum(abs(img2[:,1:] - img2[:,:-1])/255, axis=1)[::2].tolist() +\
+           np.sum(abs(img2[:,1:] - img2[:,:-1])/255, axis=0)[::2].tolist()
 
 # Waviness above, but performed after doing edge detection
 def edginess(img):  
@@ -329,7 +349,8 @@ def trim_whitespace(image):
 
     # Take out the piece containing the digit.
     # TODO: Slice out part of image containing digit.
-    new_image = image[edge_positions[0]:(-edge_positions[1])+1, edge_positions[2]:(-edge_positions[3])+1]
+    new_image = image[edge_positions[0]:(-edge_positions[1])+1, \
+                      edge_positions[2]:(-edge_positions[3])+1]
     final_image = cv2.resize(new_image, (28, 28, 1))
     return final_image
 

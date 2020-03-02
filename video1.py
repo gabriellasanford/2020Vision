@@ -5,6 +5,7 @@ import sys
 import knnClassify as knn
 import math
 import methods as meth
+import hough_grid as hough
 '''
 ADMIN BLOCK
 AKA Dr. Hochberg's stuff
@@ -15,6 +16,8 @@ AKA Dr. Hochberg's stuff
 classifier = None
 
 img_orig = cv2.imread("images/sudoku1.png", cv2.IMREAD_GRAYSCALE)
+
+hough.detect(img_orig)
 
 # Show the original image
 # This is a matplotlib display, so we must close the window to move forward
@@ -316,18 +319,18 @@ def duy_paul_gabriella_keypoints_to_cells(keypoint_list):
     return cells
 
 
-#Matt & Michael 
-#map keypoints x, y to a grid coordinate
+# #Matt & Michael 
+# #map keypoints x, y to a grid coordinate
 
-#Find interval of x by dividing  the difference of min and max
-maxX = max(k.pt[0] for k in keypoints)
-minX = min(k.pt[0] for k in keypoints)
-intervalX = (maxX-minX)//8
+# #Find interval of x by dividing  the difference of min and max
+# maxX = max(k.pt[0] for k in keypoints)
+# minX = min(k.pt[0] for k in keypoints)
+# intervalX = (maxX-minX)//8
 
-#Find interval of x by dividing  the difference of min and max
-maxY = max(k.pt[1] for k in keypoints)
-minY = min(k.pt[1] for k in keypoints)
-intervalY = (maxY-minY)//8
+# #Find interval of x by dividing  the difference of min and max
+# maxY = max(k.pt[1] for k in keypoints)
+# minY = min(k.pt[1] for k in keypoints)
+# intervalY = (maxY-minY)//8
 
 #function to return grid coor from keypoint x,y
 def pos_abs_to_grid(k_point):

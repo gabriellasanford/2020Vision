@@ -7,7 +7,7 @@ import math
 import methods as meth
 import hough_grid as hough
 '''
-ADMIN BLOCK
+OLD STUFF, should be refactored
 AKA Dr. Hochberg's stuff
 '''
 
@@ -55,7 +55,7 @@ im_with_keypoints = cv2.drawKeypoints(img, keypoints, None, (255,0,255),\
 ### These windows do not lock up the main thread
 ###
 '''
-End of admin block
+End of old block
 '''
 
 
@@ -375,7 +375,6 @@ def testMapping(cells):
         print("\033[39;49m")
     print()
     
-testMapping((keypointsToCells(img,keypoints)))
 
 
 '''
@@ -420,6 +419,11 @@ cv2.imshow("Here's a picture...", img_orig)
 while cv2.waitKey(1) & 0xFF is not ord('n'):
     continue
 pretty_print_board(sudoku_image_to_board(img_orig))
+
+#Tests keypoints to cells methodj
+'''
+testMapping((keypointsToCells(img,keypoints)))
+'''
 
 
 #Displays circles according to where they should (hopefully) be in a grid

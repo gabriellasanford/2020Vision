@@ -15,7 +15,7 @@ AKA Dr. Hochberg's stuff
 # unnecessary overhead if not used
 classifier = None
 
-img_orig = cv2.imread("images/sudoku1.png", cv2.IMREAD_GRAYSCALE)
+img_orig = cv2.imread("images/sudoku5.png", cv2.IMREAD_GRAYSCALE)
 
 hough.detect(img_orig)
 

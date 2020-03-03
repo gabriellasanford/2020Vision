@@ -30,12 +30,12 @@ def canny_edges(gray_img):
 
 # Accepts a grayscale image and returns the approximate width and height of
 # each cell in the Sudoku grid.
-def detect(gray_img):
+def count_sudoku(gray_img):
     cv2.imshow("Before", gray_img)
     edges = canny_edges(gray_img)
     # Detect points that form a line
     lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH, MIN_LENGTH, MAX_GAP)
-    return calculate_cells(lines)
+    print(calculate_cells(lines))
 
 
 # Accepts a list of lines detected by the Hough transform, and returns a 2-tuple
@@ -49,6 +49,12 @@ def calculate_cells(hough_lines):
             y1_list.append(entry[1])
             x2_list.append(entry[2])
             y2_list.append(entry[3])
+    return cell_dims(x1_list, y1_list, x2_list, y2_list)
+
+
+# Helper function to calculate_cells(), factored out to improve readability
+# Accepts four lists of numbers and returns a tuple
+def cell_dims(x1_list, y1_list, x2_list, y2_list):
     # Calculate board width and height by taking the difference between max and
     # min x's and y's, across both lists of x's and y's
     width = ((max(x1_list) - min(x1_list)) \

@@ -36,7 +36,8 @@ def count_sudoku(gray_img):
     # info on the Sudoku grid.
     lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH, MIN_LENGTH, MAX_GAP)
     grid_info = calculate_cells(lines)
-    print(grid_info)
+    # Get the individual digit images
+    img_squares = collect_squares(grid_info)
 
 
 # Accepts a list of lines detected by the Hough transform, and returns a list
@@ -86,3 +87,9 @@ def cell_dims(x1_list, y1_list, x2_list, y2_list):
     cell_width = width // 9
     cell_height = height // 9
     return (cell_width, cell_height)
+
+
+# Accepts a list of four elements of the form:
+# [<top left x>, <top left y>, <cell width>, <cell height>]
+# and returns a list of images of the individual cells.
+# def collect_squares(grid_info):

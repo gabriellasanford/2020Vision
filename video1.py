@@ -288,6 +288,50 @@ def sudoku_image_to_board(image: np.array):
 End of image-to-board block
 '''
 
+'''
+METHODS FOR ISOLATING CELLS
+'''
+#Deletes any rows or columns that are predominantely black
+#Useful?  Perhaps because then segmenting the Sudoku board will be easier
+#Black = 0, white = 255
+def delete_grid(img: np.array, threshold: int) -> np.array:
+    rows, columns = img.shape
+    print("Rows: " + str(rows))
+    print("Cols: " + str(columns))
+    columns_to_kill = list()
+    rows_to_kill = list()
+    #Loop through rows, looking for ones to kill
+    for r in range(rows):
+        counter = 0
+        for c in range(columns):
+            if img[r][c] < threshold:
+                counter += 1
+        if counter/rows > .15:
+            rows_to_kill.append(r)
+    #Same thing for columns
+    for c in range(columns):
+        counter = 0
+        for r in range(rows):
+            if img[r][c] < threshold:
+                counter += 1
+        if counter/rows > .15:
+            columns_to_kill.append(c)
+    print(rows_to_kill)
+    print(columns_to_kill)
+    #Now reverse these boys so we don't get out of bounds execeptions
+    rows_to_kill.reverse()
+    columns_to_kill.reverse()
+    #NOW KILL IT WITH FIRE
+    for r in rows_to_kill:
+        img = np.delete(img, r, 0)
+    for c in columns_to_kill:
+        img = np.delete(img, c, 1)
+    return img
+
+
+'''
+End of cell isolation
+'''
 
 '''
 GROUP SUBMISSIONS
@@ -407,18 +451,28 @@ def test_sudoku_images(num: int):
             continue
 '''
 
+#Testing delete_grid method
+img = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
+print("Original size: " + str(img.shape))
+cv2.imshow("Hello there", img)
+img2 = delete_grid(img, 100)
+print("New size: " + str(img2.shape))
+cv2.imshow("Did somebody say...less grid?", img2)
+cv2.waitKey()
+
 #Prints out the Sudoku board nicely 
 
 #Pretty-printing for the Sudoku board
 def pretty_print_board(board):
     for l in board:
         print(l)
-
-img_orig = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
+'''
+img_orig = cv2.imread("images/sudoku2.png", cv2.IMREAD_GRAYSCALE)
 cv2.imshow("Here's a picture...", img_orig)
 while cv2.waitKey(1) & 0xFF is not ord('n'):
     continue
 pretty_print_board(sudoku_image_to_board(img_orig))
+'''
 
 #Tests keypoints to cells methodj
 '''

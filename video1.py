@@ -6,6 +6,7 @@ import knnClassify as knn
 import math
 import methods as meth
 import hough_grid as hough
+import grid_deletion as grid
 '''
 OLD STUFF, should be refactored
 AKA Dr. Hochberg's stuff
@@ -288,89 +289,6 @@ def sudoku_image_to_board(image: np.array):
 End of image-to-board block
 '''
 
-'''
-METHODS FOR ISOLATING CELLS
-'''
-#Deletes any rows or columns that are predominantely black
-#Useful?  Perhaps because then segmenting the Sudoku board will be easier
-#Black = 0, white = 255
-def delete_grid(img: np.array, threshold: int) -> np.array:
-    rows, columns = img.shape
-    print("Rows: " + str(rows))
-    print("Cols: " + str(columns))
-    columns_to_kill = list()
-    rows_to_kill = list()
-    #Loop through rows, looking for ones to kill
-    for r in range(rows):
-        counter = 0
-        for c in range(columns):
-            if img[r][c] < threshold:
-                counter += 1
-        if counter/rows > .15:
-            rows_to_kill.append(r)
-    #Same thing for columns
-    for c in range(columns):
-        counter = 0
-        for r in range(rows):
-            if img[r][c] < threshold:
-                counter += 1
-        if counter/rows > .15:
-            columns_to_kill.append(c)
-    print(rows_to_kill)
-    print(columns_to_kill)
-    #Now reverse these boys so we don't get out of bounds execeptions
-    rows_to_kill.reverse()
-    columns_to_kill.reverse()
-    #NOW KILL IT WITH FIRE
-    for r in rows_to_kill:
-        img = np.delete(img, r, 0)
-    for c in columns_to_kill:
-        img = np.delete(img, c, 1)
-    return img
-
-#Perhaps instead of doing the above, would summing work?  The rows/columns would have a high value if summed...
-#Then just delete the rows/columns that have a sum that's super high/low depending on the value for white and black
-def sum_grid_kill(img: np.array, sensitivity: float) -> np.array:
-    #Get the shape of our image
-    rows, columns = img.shape
-    #Make arrays with the sum of the pixel values for the columns and rows respectively
-    column_sum = np.sum(img, 0)
-    row_sum = np.sum(img, 1)
-    #Find rows and columns with a low sum-value, which means there are a lot of black pixels 
-    columns_to_kill = list()
-    rows_to_kill = list()
-    col_avg = np.average(column_sum)
-    row_avg = np.average(row_sum)
-    for i in range(len(column_sum)):
-        #If there are a lot of black pixels, add it to the kill list
-        if column_sum[i] < (col_avg / sensitivity):
-            columns_to_kill.append(i)
-    for i in range(len(row_sum)):
-        #If there are a lot of black pixels, add it to the kill list
-        if row_sum[i] < (row_avg / sensitivity):
-            rows_to_kill.append(i)
-    #Reverse the lists so we can kill the rows/columns without messing up our bounds
-    columns_to_kill.reverse()
-    rows_to_kill.reverse()
-    #KILL IT WITH FIRE
-    for col_num in columns_to_kill:
-        img = np.delete(img, col_num, 1)
-    for row_num in rows_to_kill:
-        img = np.delete(img, row_num, 0)
-    return img
-
-#Masks anything about threshold to white
-#Remember that black = 0, white = 255
-def mask_gray_away(img: np.array, threshold: int) -> np.array:
-    img_copy = img.copy()
-    img_copy[img_copy > threshold] = 255
-    return img_copy
-
-
-
-'''
-End of cell isolation
-'''
 
 '''
 GROUP SUBMISSIONS
@@ -491,19 +409,22 @@ def test_sudoku_images(num: int):
 '''
 
 #Tests grid-deletion via sum_grid_kill and masking
-'''
+
 def test_delete_grid():
     for i in range(6):
         img = cv2.imread("images/sudoku" + str(i) +".png", cv2.IMREAD_GRAYSCALE)
+        copy = img.copy()
         cv2.imshow("Original image", img)
-        img2 = sum_grid_kill(img, 1.3)
+        img2 = grid.sum_grid_kill(img, 1.3)
         cv2.imshow("Some grids are gone", img2)
-        img3 = mask_gray_away(img2, 100)
+        img3 = grid.mask_gray_away(img2, 100)
         cv2.imshow("What's left after masking", img3)
+        copy = grid.clear_grid(copy, 1.3, 100)
+        cv2.imshow("Let's compare, shall we?", copy)
         cv2.waitKey()
         cv2.destroyAllWindows()
 test_delete_grid()
-'''
+
 
 #Prints out the Sudoku board nicely 
 

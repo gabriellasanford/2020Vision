@@ -19,7 +19,7 @@ classifier = None
 
 img_orig = cv2.imread("images/sudoku4.png", cv2.IMREAD_GRAYSCALE)
 
-#hough.count_sudoku(img_orig)
+hough.count_sudoku(img_orig)
 
 # Show the original image
 # This is a matplotlib display, so we must close the window to move forward
@@ -468,7 +468,7 @@ def test_digit_slice(img):
     cv2.destroyAllWindows()
 test_digit_slice(img)
 '''
-
+'''
 #Put digit slicing and grid deletion together
 '''
 def test_grid_delete_and_slicing():

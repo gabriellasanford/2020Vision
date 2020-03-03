@@ -17,7 +17,7 @@ AKA Dr. Hochberg's stuff
 # unnecessary overhead if not used
 classifier = None
 
-img_orig = cv2.imread("images/sudoku4.png", cv2.IMREAD_GRAYSCALE)
+img_orig = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
 
 hough.count_sudoku(img_orig)
 

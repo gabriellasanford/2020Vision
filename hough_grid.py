@@ -108,12 +108,13 @@ def collect_squares(img, grid_info):
     cell_width, cell_height = grid_info[2], grid_info[3]
     # 2-d array of digit images in the same arrangement as the Sudoku board
     digit_imgs = [[0 for i in range(9)] for i in range(9)]
-    for y in range(1, 10):
-        for x in range(1, 10):
+    for y in range(9):
+        for x in range(9):
             cell_img = grid_slice(img, x_pos + (cell_width * x),\
                 y_pos + (cell_height * y), cell_width, cell_height)
-            digit_imgs[x-1][y-1] = cv2.resize(cell_img,\
-                (DIGIT_WIDTH, DIGIT_HEIGHT))
+            # digit_imgs[x-1][y-1] = cv2.resize(cell_img,\
+            #     (DIGIT_WIDTH, DIGIT_HEIGHT))
+            digit_imgs[x][y] = cell_img
     return digit_imgs
 
 

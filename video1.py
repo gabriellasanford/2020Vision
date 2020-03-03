@@ -547,7 +547,7 @@ cv2.imshow("Blob Rectangles", img)
 
 
 #Video capture from webcam
-'''
+
 cap = cv2.VideoCapture(0)
 
 while(True):
@@ -561,7 +561,6 @@ while(True):
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 #cap.release()
-
 '''
 
 

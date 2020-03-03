@@ -7,6 +7,7 @@ import math
 import methods as meth
 import hough_grid as hough
 import grid_deletion as grid
+import digit_slicing as digit_slice
 '''
 OLD STUFF, should be refactored
 AKA Dr. Hochberg's stuff
@@ -409,7 +410,7 @@ def test_sudoku_images(num: int):
 '''
 
 #Tests grid-deletion via sum_grid_kill and masking
-
+'''
 def test_delete_grid():
     for i in range(6):
         img = cv2.imread("images/sudoku" + str(i) +".png", cv2.IMREAD_GRAYSCALE)
@@ -419,11 +420,40 @@ def test_delete_grid():
         cv2.imshow("Some grids are gone", img2)
         img3 = grid.mask_gray_away(img2, 100)
         cv2.imshow("What's left after masking", img3)
-        copy = grid.clear_grid(copy, 1.3, 100)
+        #1.3 and 170 seem to be pretty good values
+        #Might want to write a method to convolve out stray black pixels from corners
+        copy = grid.clear_grid(copy, 1.3, 170)
         cv2.imshow("Let's compare, shall we?", copy)
         cv2.waitKey()
         cv2.destroyAllWindows()
 test_delete_grid()
+'''
+
+#Test digit slicing
+'''
+img = cv2.imread("images/sudoku1.png", cv2.IMREAD_GRAYSCALE)
+img = grid.clear_grid(img, 1.3, 170)
+def test_digit_slice(img):
+    digit_array = digit_slice.slice_digits_from_gridfree_board(img)
+    for tup in digit_array:
+        digit = tup[2]
+        cv2.imshow("Digit?", digit)
+        cv2.waitKey()
+    cv2.destroyAllWindows()
+test_digit_slice(img)
+'''
+
+#Put digit slicing and grid deletion together
+def test_grid_delete_and_slicing():
+    img = cv2.imread("images/sudoku3.png", cv2.IMREAD_GRAYSCALE)
+    slices = digit_slice.slice_board_to_digits(img, 1.3, 170)
+    for digit_info in slices:
+        digit_array = digit_info[2]
+        cv2.imshow("Digit", digit_array)
+        cv2.waitKey()
+    cv2.destroyAllWindows()
+test_grid_delete_and_slicing()
+
 
 
 #Prints out the Sudoku board nicely 

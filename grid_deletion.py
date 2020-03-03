@@ -50,6 +50,7 @@ William
 '''
 #Perhaps instead of doing the above, would summing work?  The rows/columns would have a high value if summed...
 #Then just delete the rows/columns that have a sum that's super high/low depending on the value for white and black
+#William
 def sum_grid_kill(img: np.array, sensitivity: float) -> np.array:
     #Get the shape of our image
     rows, columns = img.shape
@@ -81,6 +82,7 @@ def sum_grid_kill(img: np.array, sensitivity: float) -> np.array:
 
 #Masks anything about threshold to white
 #Remember that black = 0, white = 255
+#William
 def mask_gray_away(img: np.array, threshold: int) -> np.array:
     img_copy = img.copy()
     img_copy[img_copy > threshold] = 255
@@ -90,6 +92,7 @@ def mask_gray_away(img: np.array, threshold: int) -> np.array:
 #img: np.array which is the image of the Sudoku board
 #sensitivity: how strict to be in getting rid of rows/columns with lots of black
 #threshold: the masking threshold for anything about threshold gets sent to white
+#William
 def clear_grid(img:np.array, sensitivity: float, threshold: int) -> np.array:
     img = sum_grid_kill(img, sensitivity)
     img = mask_gray_away(img, threshold)

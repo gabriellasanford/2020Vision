@@ -328,6 +328,22 @@ def delete_grid(img: np.array, threshold: int) -> np.array:
         img = np.delete(img, c, 1)
     return img
 
+#Perhaps instead of doing the above, would summing work?  The rows/columns would have a high value if summed...
+#Then just delete the rows/columns that have a sum that's super high/low depending on the value for white and black
+def sum_grid_kill(img: np.array) -> np.array:
+    #Get the shape of our image
+    rows, columns = img.shape
+    #Make arrays with the sum of the pixel values for the columns and rows respectively
+    column_sum = np.sum(img, 0)
+    row_sum = np.sum(img, 1)
+    #Reverse the arrays so we can process them in order without getting out of bounds
+    print("Cols:")
+    print(column_sum)
+    print("Rows:")
+    print(row_sum)
+    return img
+
+
 
 '''
 End of cell isolation
@@ -455,7 +471,7 @@ def test_sudoku_images(num: int):
 img = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
 print("Original size: " + str(img.shape))
 cv2.imshow("Hello there", img)
-img2 = delete_grid(img, 100)
+img2 = sum_grid_kill(img)
 print("New size: " + str(img2.shape))
 cv2.imshow("Did somebody say...less grid?", img2)
 cv2.waitKey()

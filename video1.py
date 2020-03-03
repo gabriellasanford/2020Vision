@@ -5,8 +5,11 @@ import sys
 import knnClassify as knn
 import math
 import methods as meth
+import hough_grid as hough
+import grid_deletion as grid
+import digit_slicing as digit_slice
 '''
-ADMIN BLOCK
+OLD STUFF, should be refactored
 AKA Dr. Hochberg's stuff
 '''
 
@@ -14,7 +17,9 @@ AKA Dr. Hochberg's stuff
 # unnecessary overhead if not used
 classifier = None
 
-img_orig = cv2.imread("images/sudoku1.png", cv2.IMREAD_GRAYSCALE)
+img_orig = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
+
+hough.count_sudoku(img_orig)
 
 # Show the original image
 # This is a matplotlib display, so we must close the window to move forward
@@ -52,7 +57,7 @@ im_with_keypoints = cv2.drawKeypoints(img, keypoints, None, (255,0,255),\
 ### These windows do not lock up the main thread
 ###
 '''
-End of admin block
+End of old block
 '''
 
 
@@ -281,6 +286,23 @@ def sudoku_image_to_board(image: np.array):
     board = keypoints_to_board(keypoints, x_spread, y_spread)
     return board
 
+#Builds a Sudoku board as a 2D list
+#William
+def image_to_board(img: np.array, sensitivity: float, threshold: int) -> list:
+    #Construct the Sudoku board as 2-d list, fill it with 0s as empty values
+    board = [[0 for col in range(9)] for row in range(9)]
+    list_of_digit_tups = digit_slice.slice_board_to_digits(img, sensitivity, threshold)
+    #Put stuff into the board
+    for tup in list_of_digit_tups:
+        col = tup[0]
+        row = tup[1]
+        digit = int(classify_single_img(tup[2]))
+        #cv2.imshow("Hi", tup[2])
+        #print("Prediction: " + str(digit))
+        #cv2.waitKey()
+        board[row][col] = digit
+    return board
+
 '''
 End of image-to-board block
 '''
@@ -316,18 +338,18 @@ def duy_paul_gabriella_keypoints_to_cells(keypoint_list):
     return cells
 
 
-#Matt & Michael 
-#map keypoints x, y to a grid coordinate
+# #Matt & Michael 
+# #map keypoints x, y to a grid coordinate
 
-#Find interval of x by dividing  the difference of min and max
-maxX = max(k.pt[0] for k in keypoints)
-minX = min(k.pt[0] for k in keypoints)
-intervalX = (maxX-minX)//8
+# #Find interval of x by dividing  the difference of min and max
+# maxX = max(k.pt[0] for k in keypoints)
+# minX = min(k.pt[0] for k in keypoints)
+# intervalX = (maxX-minX)//8
 
-#Find interval of x by dividing  the difference of min and max
-maxY = max(k.pt[1] for k in keypoints)
-minY = min(k.pt[1] for k in keypoints)
-intervalY = (maxY-minY)//8
+# #Find interval of x by dividing  the difference of min and max
+# maxY = max(k.pt[1] for k in keypoints)
+# minY = min(k.pt[1] for k in keypoints)
+# intervalY = (maxY-minY)//8
 
 #function to return grid coor from keypoint x,y
 def pos_abs_to_grid(k_point):
@@ -372,7 +394,6 @@ def testMapping(cells):
         print("\033[39;49m")
     print()
     
-testMapping((keypointsToCells(img,keypoints)))
 
 
 '''
@@ -405,6 +426,8 @@ def test_sudoku_images(num: int):
             continue
 '''
 
+
+
 #Prints out the Sudoku board nicely 
 
 #Pretty-printing for the Sudoku board
@@ -412,11 +435,76 @@ def pretty_print_board(board):
     for l in board:
         print(l)
 
-img_orig = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
+#Tests grid-deletion via sum_grid_kill and masking
+'''
+def test_delete_grid():
+    for i in range(6):
+        img = cv2.imread("images/sudoku" + str(i) +".png", cv2.IMREAD_GRAYSCALE)
+        copy = img.copy()
+        cv2.imshow("Original image", img)
+        img2 = grid.sum_grid_kill(img, 1.3)
+        cv2.imshow("Some grids are gone", img2)
+        img3 = grid.mask_gray_away(img2, 170)
+        cv2.imshow("What's left after masking", img3)
+        #1.3 and 170 seem to be pretty good values
+        #Might want to write a method to convolve out stray black pixels from corners
+        copy = grid.clear_grid(copy, 1.3, 170)
+        cv2.imshow("Let's compare, shall we?", copy)
+        cv2.waitKey()
+        cv2.destroyAllWindows()
+test_delete_grid()
+'''
+
+#Test digit slicing
+'''
+img = cv2.imread("images/sudoku1.png", cv2.IMREAD_GRAYSCALE)
+img = grid.clear_grid(img, 1.3, 170)
+def test_digit_slice(img):
+    digit_array = digit_slice.slice_digits_from_gridfree_board(img)
+    for tup in digit_array:
+        digit = tup[2]
+        cv2.imshow("Digit?", digit)
+        cv2.waitKey()
+    cv2.destroyAllWindows()
+test_digit_slice(img)
+'''
+'''
+#Put digit slicing and grid deletion together
+'''
+def test_grid_delete_and_slicing():
+    img = cv2.imread("images/sudoku5.png", cv2.IMREAD_GRAYSCALE)
+    slices = digit_slice.slice_board_to_digits(img, 1.3, 170)
+    for digit_info in slices:
+        digit_array = digit_info[2]
+        print("Column: " + str(digit_info[0]) + " | Row: " + str(digit_info[1]))
+        cv2.imshow("Digit", digit_array)
+        cv2.waitKey()
+    cv2.destroyAllWindows()
+test_grid_delete_and_slicing()
+'''
+
+#Tests picture to 2D list
+#Classifier doesn't work currently
+'''
+def test_image_to_board():
+    img = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
+    board = image_to_board(img, 1.3, 170)
+    pretty_print_board(board)
+'''
+
+test_image_to_board()
+'''
+img_orig = cv2.imread("images/sudoku2.png", cv2.IMREAD_GRAYSCALE)
 cv2.imshow("Here's a picture...", img_orig)
 while cv2.waitKey(1) & 0xFF is not ord('n'):
     continue
 pretty_print_board(sudoku_image_to_board(img_orig))
+'''
+
+#Tests keypoints to cells methodj
+'''
+testMapping((keypointsToCells(img,keypoints)))
+'''
 
 
 #Displays circles according to where they should (hopefully) be in a grid
@@ -459,7 +547,7 @@ cv2.imshow("Blob Rectangles", img)
 
 
 #Video capture from webcam
-'''
+
 cap = cv2.VideoCapture(0)
 
 while(True):
@@ -473,7 +561,6 @@ while(True):
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 #cap.release()
-
 '''
 
 

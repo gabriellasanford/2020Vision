@@ -468,7 +468,7 @@ def test_digit_slice(img):
     cv2.destroyAllWindows()
 test_digit_slice(img)
 '''
-'''
+
 #Put digit slicing and grid deletion together
 '''
 def test_grid_delete_and_slicing():
@@ -492,7 +492,7 @@ def test_image_to_board():
     pretty_print_board(board)
 '''
 
-test_image_to_board()
+#test_image_to_board()
 '''
 img_orig = cv2.imread("images/sudoku2.png", cv2.IMREAD_GRAYSCALE)
 cv2.imshow("Here's a picture...", img_orig)
@@ -502,12 +502,11 @@ pretty_print_board(sudoku_image_to_board(img_orig))
 '''
 
 #Tests keypoints to cells methodj
-'''
-testMapping((keypointsToCells(img,keypoints)))
-'''
+
 
 
 #Displays circles according to where they should (hopefully) be in a grid
+
 '''
 #Now write a method that displays circles in the same spot as they are, using map_keypoints
 def draw_keypoint_grid(list_of_keypoints: list, size: int):
@@ -525,10 +524,11 @@ def draw_keypoint_grid(list_of_keypoints: list, size: int):
     cv2.waitKey()
 '''
 
-
 #Shows keypoints, then the keypoint image snips
-'''
+
 # Show keypoints
+
+'''
 cv2.imshow("Keypoints", im_with_keypoints)
 cv2.waitKey(0)
 
@@ -543,6 +543,9 @@ for k in keypoints:
     while cv2.waitKey(1) & 0xFF != ord('n'):
         continue
 cv2.imshow("Blob Rectangles", img)
+'''
+
+
 '''
 
 

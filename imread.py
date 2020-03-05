@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import methods as meth
 
 image_size = 28 # width and length
 
@@ -26,6 +27,3 @@ img2 = img.copy()
 img2[img2 > 0] = 255
 plt.imshow(img2, cmap=plt.cm.Greys)
 plt.show()
-
-def waviness(img):
-    return np.sum(abs(img2[:,1:] - img2[:,:-1])/255, axis=1)[::2]

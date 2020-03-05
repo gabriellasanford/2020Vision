@@ -1,20 +1,10 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
+import methods as meth
 
 image_size = 28 # width and length
 
-"""
-    FEATURE FUNCTIONS
-"""
-
-# Number of b/w transitions along every other row
-# 14 dimensions
-# Rob Hochberg
-def waviness(img):
-    img2 = img.copy()
-    img2[img2 > 0] = 255 # Any pixel not white becomes black
-    return np.sum(abs(img2[:,1:] - img2[:,:-1])/255, axis=1)[::2].tolist()
 
 """
     Admin Functions
@@ -65,7 +55,7 @@ def find_com(feature_map):
     return com_map
 
 
-features = [waviness]
+features = [meth.waviness]
 data = read_images("data/mnist_medium.csv")
 digit_map = make_digit_map(data)
 feature_map = build_feature_map(digit_map, features)

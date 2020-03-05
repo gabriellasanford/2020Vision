@@ -2,7 +2,7 @@ import cv2
 from matplotlib import pyplot as plt
 import numpy as np
 import time
-import methods
+import methods as meth
 
 WIDTH = 900
 HEIGHT = 900
@@ -77,7 +77,7 @@ def testAMD(labels, pred):
     TRAINING AND TESTING
 """
 # Select the set of features
-features = [methods.waviness, methods.slantiness]
+features = [meth.waviness, meth.slantiness]
 
 
 # Set up training data

@@ -19,7 +19,7 @@ classifier = None
 
 img_orig = cv2.imread("images/sudoku0.png", cv2.IMREAD_GRAYSCALE)
 
-hough.count_sudoku(img_orig)
+#hough.count_sudoku(img_orig)
 
 # Show the original image
 # This is a matplotlib display, so we must close the window to move forward
@@ -438,7 +438,7 @@ def pretty_print_board(board):
 #Tests grid-deletion via sum_grid_kill and masking
 '''
 def test_delete_grid():
-    for i in range(6):
+    for i in range(23, 33):
         img = cv2.imread("images/sudoku" + str(i) +".png", cv2.IMREAD_GRAYSCALE)
         copy = img.copy()
         cv2.imshow("Original image", img)

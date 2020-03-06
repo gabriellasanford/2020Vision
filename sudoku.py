@@ -6,6 +6,17 @@ from os import listdir
 from os.path import isfile, join
 import time
 import random
+from os import system
+
+SUDOKU_CNF_FILE = 'del.cnf'
+MINISAT_RESULT_FILE = 'sol.txt'
+OUTPUT_BUFFER = 'del.txt'
+TEST_SUDOKU_FILES_DIRECTORY = './sudoku_data'
+
+SOLUTION_TYPE_BACKTRACKING = 0
+SOLUTION_TYPE_SAT_SOLVER = 1
+
+NUM_FILES_TO_RUN_TESTS_ON = 10
 
 class Sudoku:
     def __init__(self, dim = 9):
@@ -177,9 +188,24 @@ class Sudoku:
         # All good!
         return True
 
+    # Gives the code for a number that goes at (row, col) in the board.
+    def code(self, num, row, col):
+        return num * 100 + row * 10 + col + 1
+
+    # Decodes the code to give the number, row, and column that the code represents.
+    def decode(self, code):
+        code -= 1
+        col = code % 10
+        code //= 10
+        row = code % 10
+        code //= 10
+        num = code
+
+        return (num, row, col)
+
     # Attempt to solve the Sudoku.,
     # Returns True if the board is successfully solved, False if otherwise.
-    def solve(self):
+    def solve_backtrack(self):
         # Account for the clues.
         for the_id in range(self.dim * self.dim):
             if self.backing_array[the_id] is not None:
@@ -210,6 +236,7 @@ class Sudoku:
 
         return False
 
+    # Helper for backtrack solver.
     # Attempts to set the value for a given cell (at position `index` in the list of the cells to fill) to `val`
     # If the attempt is successful, it continues to fill the next cell to be filled.
     def fill(self, index, val):
@@ -230,21 +257,142 @@ class Sudoku:
 
         return False
 
+    # Takes a 2D representation of a sudoku board and prints its solution.
+    def generate_cnf_clauses(self):
+        clauses = []
+        # Make sure that the pre-filled clues are considered (enforced)...
+        for the_id in range(self.dim * self.dim):
+            num = self.get_for_id(the_id)
+            if num is not None and num != 0:
+                x, y = self.get_coord_for_id(the_id)
+                clauses.append(str(self.code(num, x, y)) + ' 0')
+        
+        # Enforce only 1 entry of all the entries that can go to a cell is included.
+        for row in range(self.dim):
+            for col in range(self.dim):
+                for i in range(1,self.dim):
+                    for j in range(2,self.dim + 1):
+                        clauses.append(str(-1*i) + ' ' + str(-1*j) + ' 0')
+
+
+        # Enforce at least one of all the entries of every number that can go to a cell is included.
+        for row in range(self.dim):
+            for col in range(self.dim):
+                clause = ''
+                for num in range(1,self.dim + 1):
+                    num_code = self.code(num, row, col)
+                    clause += str(num_code) + ' '
+                clause += '0'
+                clauses.append(clause)
+        
+        sqrt = int(math.sqrt(self.dim))
+        # Enforce no repeat of any number within a 3x3 subsudoku.
+        for num in range(1,10):
+            for cy in range(0, self.dim, sqrt):
+                for cx in range(0, self.dim, sqrt):
+                    grid3x3 = []
+                    for ydiff in range(sqrt):
+                        for xdiff in range(sqrt):
+                            y = cy + ydiff
+                            x = cx + xdiff
+                            num_code = self.code(num, y, x)
+                            grid3x3.append(num_code)
+                    
+                    for i in range(len(grid3x3) - 1):
+                        for j in range(i + 1, len(grid3x3)):
+                            clauses.append(str(-1*grid3x3[i]) + ' ' + str(-1*grid3x3[j]) + ' 0')
+                    
+        for num in range(1, self.dim + 1):
+            for row in range(self.dim):
+                row_elems = []
+                col_elemes = []
+                for col in range(self.dim):
+                    num_code_row = self.code(num, row, col)
+                    row_elems.append(num_code_row)
+
+                    num_code_column = self.code(num, col, row)
+                    col_elemes.append(num_code_column)
+
+                # Enforce that a number appears at least once in a row.
+                clause = ''
+                for elem in row_elems:
+                    clause += str(elem) + ' '
+                clause += '0'
+                clauses.append(clause)
+
+                # Enforce no repeatition of any number within a row.
+                for i in range(len(row_elems) - 1):
+                    for j in range(i + 1, len(row_elems)):
+                        clauses.append(str(-1*row_elems[i]) + ' ' + str(-1*row_elems[j]) + ' 0')
+
+                # Enforce that a number appears at least once in a column.
+                clause = ''
+                for elem in col_elemes:
+                    clause += str(elem) + ' '
+                clause += '0'
+                clauses.append(clause)
+
+                # Enforce no repeatition of any number within a column.
+                for i in range(len(col_elemes) - 1):
+                    for j in range(i + 1, len(col_elemes)):
+                        clauses.append(str(-1*col_elemes[i]) + ' ' + str(-1*col_elemes[j]) + ' 0')
+        
+        return clauses
+
+    def solve_minisat(self):
+        clauses = self.generate_cnf_clauses()
+        self.write_clauses_to_file(clauses)
+        minisat_solution = self.run_minisat()
+        
+        for i in minisat_solution:
+            if i > 0: # A cell to be filled...
+                num, row, column = self.decode(i)        
+                self.set_for_id(self.get_id(row, column), num)
+
+        return True
+
+    def write_clauses_to_file(self, clauses):
+        cnf = open(SUDOKU_CNF_FILE, 'w')
+        sqrt = int(math.sqrt(self.dim))
+        num_variables = (self.dim**sqrt)
+
+        cnf.write('p cnf %d %d\n' % (num_variables, len(clauses)))
+        for clause in clauses:
+            cnf.write(clause + '\n')
+        cnf.close()
+
+    def run_minisat(self):
+        system("minisat %s %s > %s"%(SUDOKU_CNF_FILE, MINISAT_RESULT_FILE, OUTPUT_BUFFER))
+        return [int(x) for x in (open(MINISAT_RESULT_FILE, 'r').readlines()[1].split())]
+
 # Takes a 2D list (9x9) representation of a sudoku board and attempts to solve it (empty cells are represented by 0s).
 # Returns a matrix representing the solution for the input board (as a 9x9 as a 2D list) if the board is solved,
 # or a board that is the same as the input board if the sudoku is not solved.
-def solve_sudoku(sudoku_board):
+def solve_sudoku(sudoku_board, solution_type):
     sudoku = Sudoku()
     if not sudoku.initialize(sudoku_board):
         print("Initialization Error")
         return None
-    if sudoku.solve():
+    
+    success = False
+    if solution_type == SOLUTION_TYPE_BACKTRACKING:
+        success = sudoku.solve_backtrack()
+    elif solution_type == SOLUTION_TYPE_SAT_SOLVER:
+        success = sudoku.solve_minisat()
+
+    if success:
         assert (sudoku.check())
         sudoku.print_tidy()
     else:
         print("Sudoku is not solvable.")
 
     return sudoku.get_matrix()
+
+def solve_sudoku_backtracking(sudoku_board):
+    return solve_sudoku(sudoku_board, SOLUTION_TYPE_BACKTRACKING)
+
+def solve_sudoku_sat_solver(sudoku_board):
+    return solve_sudoku(sudoku_board, SOLUTION_TYPE_SAT_SOLVER)
 
 def count_clues(sudoku_board):
     clues = 0
@@ -274,12 +422,12 @@ def reduce_clues(sudoku_board, target_clues):
         sudoku_board[clue_to_cancel[0]][clue_to_cancel[1]] = 0
 
 
-# Reads sudoku data from txt files and solves them.
+# Reads sudoku data from txt files and solves them by the given solution type.
 # Times the tests.
 # Sudoku data obtained from the University of Vaasa's Sudoku Research Page (http://lipas.uwasa.fi/~timan/sudoku/)
-def run_tests():
+def run_tests(solution_type, num_files_to_execute):
     prefix = "./sudoku_data"
-    sudoku_files = [f for f in listdir(prefix)]
+    sudoku_files = [f for f in listdir(prefix)][-num_files_to_execute:]
     boards = []
     for file_name in sudoku_files:
         file = open(join(prefix, file_name), "r")
@@ -298,7 +446,7 @@ def run_tests():
         print(sudoku_files[index])
         print("Clues: %d" % (count_clues(board)))
         curr_start_time = time.time()
-        solve_sudoku(board)
+        solve_sudoku(board, solution_type)
         time_taken = time.time() - curr_start_time
         max_time_taken = max(max_time_taken, time_taken)
         min_time_taken = min(min_time_taken, time_taken)
@@ -310,4 +458,10 @@ def run_tests():
     print("Min time per sudoku: %ss." % (round(min_time_taken, 3)))
     print("Max time per sudoku: %ss." % (round(max_time_taken, 3)))
 
-run_tests()
+    return total_time_taken
+
+total_time_backtracking = run_tests(SOLUTION_TYPE_BACKTRACKING, NUM_FILES_TO_RUN_TESTS_ON)
+print("--------------------------")
+total_time_sat_solver = run_tests(SOLUTION_TYPE_SAT_SOLVER, NUM_FILES_TO_RUN_TESTS_ON)
+print("--------------------------")
+print('SAT Solver is performing %.3fx better than backtracking.' % (total_time_backtracking/total_time_sat_solver))

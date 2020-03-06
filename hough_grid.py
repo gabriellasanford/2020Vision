@@ -13,8 +13,8 @@ THRESH_TWO = 200
 RHO = 1
 THETA = math.pi/180
 LINE_THRESH = 50
-MIN_LENGTH = 25
-MAX_GAP = 5
+MIN_LENGTH = 25.0
+MAX_GAP = 5.0
 
 # Line drawing thickness
 THICKNESS = 3
@@ -39,7 +39,8 @@ def count_sudoku(gray_img):
     edges = canny_edges(gray_img)
     # Detect points that form lines, and give them to calculate_cells() to get
     # info on the Sudoku grid.
-    lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH, MIN_LENGTH, MAX_GAP)
+    lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH,\
+        minLineLength=MIN_LENGTH, maxLineGap=MAX_GAP)
     grid_info = calculate_cells(lines)
     # Get the individual digit images
     img_squares = collect_squares(gray_img, grid_info)

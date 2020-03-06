@@ -15,7 +15,7 @@ RHO = 1
 THETA = math.pi/180
 LINE_THRESH = 50
 MIN_LENGTH = 25.0
-MAX_GAP = 15.0
+MAX_GAP = 40.0
 
 # Line drawing thickness
 THICKNESS = 3

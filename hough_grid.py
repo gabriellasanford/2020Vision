@@ -99,6 +99,36 @@ def cell_dims(x1_list, y1_list, x2_list, y2_list):
     return (cell_width, cell_height)
 
 
+# Interchangeable with cell_dims, but uses a different method of finding the 
+# size of the cells on the Sudoku board.
+# Accepts four lists of numbers and returns a 2-tuple of the form:
+# (<cell width>, <cell height>).
+def avg_cell_dims(x1_list, y1_list, x2_list, y2_list):
+    # Sort the lists from least to greatest.
+    x1_list.sort(reverse=True)
+    x2_list.sort(reverse=True)
+    y1_list.sort(reverse=True)
+    y2_list.sort(reverse=True)
+    # Take the differences between every consecutive pair of x's and y's in the
+    # sorted list.
+    coord_lists = [x1_list, x2_list, y1_list, y2_list]
+    avg_diffs = []
+    prev = 0
+    for collection in coord_lists:
+        diff_list = []
+        for curr in collection:
+            diff_list = []
+            if prev == 0:
+                prev = curr
+            else:
+                diff_list.append(prev - curr)
+                prev = curr
+        avg_diffs.append(sum(diff_list) // len(diff_list))
+    width = (avg_diffs[0] + avg_diffs[1]) // 2
+    height = (avg_diffs[2] + avg_diffs[3]) // 2
+    return (width, height)
+
+
 # Accepts a list of four elements of the form:
 # [<top left x>, <top left y>, <cell width>, <cell height>]
 # and returns a list of images of the individual cells in 28x28 format for

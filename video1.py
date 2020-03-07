@@ -546,12 +546,19 @@ cv2.imshow("Blob Rectangles", img)
 '''
 
 
+
+
 '''
-
-
 #Video capture from webcam
-
 cap = cv2.VideoCapture(0)
+while(True):
+    ret, frame = cap.read()
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    cv2.imshow('frame',gray)
+    if cv2.waitKey(1) & 0xFF == ord(' '):
+        break
+
+idx = 0
 
 while(True):
     # Capture frame-by-frame
@@ -561,9 +568,14 @@ while(True):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     # Display the resulting frame
     cv2.imshow('frame',gray)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    #cv2.waitKey(500)
+    key = cv2.waitKey(1)
+    if key & 0xFF == ord(' '):
+        cv2.imwrite("sudoku_skew/sudoku" + str(idx) + ".png", gray)
+        idx += 1
+    if key & 0xFF == ord('q'):
         break
-#cap.release()
+cap.release()q
 '''
 
 

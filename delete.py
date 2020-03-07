@@ -15,7 +15,7 @@ RHO = 1
 THETA = math.pi/180
 LINE_THRESH = 50
 MIN_LENGTH = 25.0
-MAX_GAP = 40.0
+MAX_GAP = 15.0
 
 # Line drawing thickness
 THICKNESS = 3
@@ -50,7 +50,8 @@ edges = canny_edges(img_orig)
 cv2.imshow("Canny", edges)
 
 # Perform the line detection
-lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH, minLineLength=MIN_LENGTH, maxLineGap=MAX_GAP)
+lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH,\
+    minLineLength=MIN_LENGTH, maxLineGap=MAX_GAP)
 print(lines[0]) # What does one returned Hough line look like?
 
 # Build a list of angles for all the Hough segments

@@ -1,5 +1,5 @@
 # Yeabkal Wubshit
-# Sudoku Solver using Backtracking.
+# Sudoku Solver using Backtracking and SAT Solver.
 
 import math
 from os import listdir
@@ -7,20 +7,24 @@ from os.path import isfile, join
 import time
 import random
 from os import system
+from pysat.solvers import Glucose3
 
-SUDOKU_CNF_FILE = 'del.cnf'
-MINISAT_RESULT_FILE = 'sol.txt'
-OUTPUT_BUFFER = 'del.txt'
 TEST_SUDOKU_FILES_DIRECTORY = './sudoku_data'
 
 SOLUTION_TYPE_BACKTRACKING = 0
 SOLUTION_TYPE_SAT_SOLVER = 1
 
-NUM_FILES_TO_RUN_TESTS_ON = 10
+# Tidy print constants
+CHECK_MARK = '\033[92m' + '\033[1m' + u'\u2713' + '\033[0m' # Green + Bold + CheckMark + EndColor
+FAIL_MARK = '\033[91m' + '\033[1m' + 'X' + '\033[0m' # Red + Bold + X + EndColor
+
+
+NUM_FILES_TO_RUN_TESTS_ON = 45
 
 class Sudoku:
     def __init__(self, dim = 9):
         self.dim = dim
+        self.sat_solver = Glucose3()
         self.possible_values = [(i + 1) for i in range(self.dim)]
         # Flattened representation of the Sudoku Board.
         self.backing_array = [None for i in range(self.dim * self.dim)]
@@ -265,25 +269,24 @@ class Sudoku:
             num = self.get_for_id(the_id)
             if num is not None and num != 0:
                 x, y = self.get_coord_for_id(the_id)
-                clauses.append(str(self.code(num, x, y)) + ' 0')
+                self.sat_solver.add_clause([self.code(num, x, y)])
         
         # Enforce only 1 entry of all the entries that can go to a cell is included.
         for row in range(self.dim):
             for col in range(self.dim):
                 for i in range(1,self.dim):
                     for j in range(2,self.dim + 1):
-                        clauses.append(str(-1*i) + ' ' + str(-1*j) + ' 0')
+                        self.sat_solver.add_clause([-i, -j])
 
 
         # Enforce at least one of all the entries of every number that can go to a cell is included.
         for row in range(self.dim):
             for col in range(self.dim):
-                clause = ''
+                clause = []
                 for num in range(1,self.dim + 1):
                     num_code = self.code(num, row, col)
-                    clause += str(num_code) + ' '
-                clause += '0'
-                clauses.append(clause)
+                    clause.append(num_code)
+                self.sat_solver.add_clause(clause)
         
         sqrt = int(math.sqrt(self.dim))
         # Enforce no repeat of any number within a 3x3 subsudoku.
@@ -300,70 +303,55 @@ class Sudoku:
                     
                     for i in range(len(grid3x3) - 1):
                         for j in range(i + 1, len(grid3x3)):
-                            clauses.append(str(-1*grid3x3[i]) + ' ' + str(-1*grid3x3[j]) + ' 0')
+                            self.sat_solver.add_clause([-grid3x3[i], -grid3x3[j]])
                     
         for num in range(1, self.dim + 1):
             for row in range(self.dim):
                 row_elems = []
-                col_elemes = []
+                col_elems = []
                 for col in range(self.dim):
                     num_code_row = self.code(num, row, col)
                     row_elems.append(num_code_row)
 
                     num_code_column = self.code(num, col, row)
-                    col_elemes.append(num_code_column)
+                    col_elems.append(num_code_column)
 
                 # Enforce that a number appears at least once in a row.
-                clause = ''
+                clause = []
                 for elem in row_elems:
-                    clause += str(elem) + ' '
-                clause += '0'
-                clauses.append(clause)
+                    clause.append(elem)
+                self.sat_solver.add_clause(clause)
 
                 # Enforce no repeatition of any number within a row.
                 for i in range(len(row_elems) - 1):
                     for j in range(i + 1, len(row_elems)):
-                        clauses.append(str(-1*row_elems[i]) + ' ' + str(-1*row_elems[j]) + ' 0')
+                        self.sat_solver.add_clause([-row_elems[i], -row_elems[j]])
 
                 # Enforce that a number appears at least once in a column.
-                clause = ''
-                for elem in col_elemes:
-                    clause += str(elem) + ' '
-                clause += '0'
-                clauses.append(clause)
+                clause = []
+                for elem in col_elems:
+                    clause.append(elem)
+                self.sat_solver.add_clause(clause)
 
                 # Enforce no repeatition of any number within a column.
-                for i in range(len(col_elemes) - 1):
-                    for j in range(i + 1, len(col_elemes)):
-                        clauses.append(str(-1*col_elemes[i]) + ' ' + str(-1*col_elemes[j]) + ' 0')
+                for i in range(len(col_elems) - 1):
+                    for j in range(i + 1, len(col_elems)):
+                        self.sat_solver.add_clause([-col_elems[i], -col_elems[j]])
         
-        return clauses
 
     def solve_minisat(self):
-        clauses = self.generate_cnf_clauses()
-        self.write_clauses_to_file(clauses)
-        minisat_solution = self.run_minisat()
+        self.generate_cnf_clauses()
+        if not self.sat_solver.solve():
+            return False
+        minisat_solution = self.sat_solver.get_model()
+        selected_cells = [x for x in minisat_solution if x > 0]
         
-        for i in minisat_solution:
-            if i > 0: # A cell to be filled...
-                num, row, column = self.decode(i)        
-                self.set_for_id(self.get_id(row, column), num)
+        for i in selected_cells:
+            num, row, column = self.decode(i)        
+            self.set_for_id(self.get_id(row, column), num)
+                
 
         return True
-
-    def write_clauses_to_file(self, clauses):
-        cnf = open(SUDOKU_CNF_FILE, 'w')
-        sqrt = int(math.sqrt(self.dim))
-        num_variables = (self.dim**sqrt)
-
-        cnf.write('p cnf %d %d\n' % (num_variables, len(clauses)))
-        for clause in clauses:
-            cnf.write(clause + '\n')
-        cnf.close()
-
-    def run_minisat(self):
-        system("minisat %s %s > %s"%(SUDOKU_CNF_FILE, MINISAT_RESULT_FILE, OUTPUT_BUFFER))
-        return [int(x) for x in (open(MINISAT_RESULT_FILE, 'r').readlines()[1].split())]
 
 # Takes a 2D list (9x9) representation of a sudoku board and attempts to solve it (empty cells are represented by 0s).
 # Returns a matrix representing the solution for the input board (as a 9x9 as a 2D list) if the board is solved,
@@ -383,10 +371,13 @@ def solve_sudoku(sudoku_board, solution_type):
     if success:
         assert (sudoku.check())
         sudoku.print_tidy()
+        print(CHECK_MARK)
+        return sudoku.get_matrix()
     else:
         print("Sudoku is not solvable.")
-
-    return sudoku.get_matrix()
+        print(FAIL_MARK)
+        return None
+ 
 
 def solve_sudoku_backtracking(sudoku_board):
     return solve_sudoku(sudoku_board, SOLUTION_TYPE_BACKTRACKING)
@@ -446,14 +437,16 @@ def run_tests(solution_type, num_files_to_execute):
         print(sudoku_files[index])
         print("Clues: %d" % (count_clues(board)))
         curr_start_time = time.time()
-        solve_sudoku(board, solution_type)
+        if solve_sudoku(board, solution_type) is not None:
+            solved_sudokus_count += 1
         time_taken = time.time() - curr_start_time
         max_time_taken = max(max_time_taken, time_taken)
         min_time_taken = min(min_time_taken, time_taken)
-        solved_sudokus_count += 1
+        
     total_time_taken = time.time() - start_time
     average_solve_time = (total_time_taken)/solved_sudokus_count
     print("Total time taken for %d sudokus: %ss." % (solved_sudokus_count, round(total_time_taken, 3)))
+    print("Failed solve attempts: %d" % (NUM_FILES_TO_RUN_TESTS_ON - solved_sudokus_count))
     print("Average time taken per sudoku: %ss." % (round(average_solve_time, 3)))
     print("Min time per sudoku: %ss." % (round(min_time_taken, 3)))
     print("Max time per sudoku: %ss." % (round(max_time_taken, 3)))

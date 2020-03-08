@@ -27,7 +27,7 @@ class Sudoku:
         self.sat_solver = Glucose3()
         self.possible_values = [(i + 1) for i in range(self.dim)]
         # Flattened representation of the Sudoku Board.
-        self.backing_array = [None for i in range(self.dim * self.dim)]
+        self.backing_array = [0 for i in range(self.dim * self.dim)]
         # possibilities[i] contains all values that can potentially go to the ith cell.
         self.possibilities = [set([i for i in range(1, self.dim + 1)]) for j in range(self.dim * self.dim)]
         # rows[i] contains all the cells that are in the ith row.
@@ -68,8 +68,9 @@ class Sudoku:
     def get_matrix(self):
         return [self.backing_array[i*self.dim:i*self.dim+self.dim] for i in range(self.dim)]
 
-    # Prints the Sudoku board.
-    def print_tidy(self):
+    # Captures a tidy print representation of the Sudoku board.
+    def capture_tidy_print(self, is_solution=False):
+        capture = []
         sqrt = int(math.sqrt(self.dim))
         printable = self.get_matrix()
         top_bottom_rows = '* '
@@ -80,16 +81,33 @@ class Sudoku:
 
         for row in range(self.dim):
             if row == 0:
-               print(top_bottom_rows)
+               capture.append(top_bottom_rows)
             to_print = '| '
             for col in range(self.dim):
-                to_print += str(printable[row][col]) + ' '
+                char_to_print = ''
+                if printable[row][col] != 0:
+                    char_to_print = str(printable[row][col])
+                    if is_solution and self.old_copy[row][col] == 0:
+                        char_to_print = '\033[92m' + '\033[1m' + char_to_print + '\033[0m'
+                else:
+                    char_to_print = FAIL_MARK
+                to_print += char_to_print + ' '
                 if (col + 1) % sqrt == 0:
                     to_print += '| '
-            print(to_print)
+            capture.append(to_print)
             if (row + 1) % sqrt == 0:
-                print(top_bottom_rows)
-        print()
+                capture.append(top_bottom_rows)
+        capture.append('')
+
+        return capture
+    
+    def print_tidy_capture(self, capture):
+        for captured_line in capture:
+            print(captured_line)
+    
+    def print_old_and_new_captures(self, oldc, newc):
+        for i in range(len(oldc)):
+            print(oldc[i] + '\t' + newc[i])
 
     # Returns the subsudoku where the cell (x,y) is located in.
     def get_subsudoku(self, x, y):
@@ -149,7 +167,7 @@ class Sudoku:
 
     # Clears the value at the location (x,y) represented by `the_id`.
     def clear_for_id(self, the_id):
-        self.backing_array[the_id] = None
+        self.backing_array[the_id] = 0
         for pair in self.memo[the_id]:
             self.possibilities[pair[0]].add(pair[1])
         self.memo[the_id] = []
@@ -210,9 +228,11 @@ class Sudoku:
     # Attempt to solve the Sudoku.,
     # Returns True if the board is successfully solved, False if otherwise.
     def solve_backtrack(self):
+        self.save_old_copy()
         # Account for the clues.
+
         for the_id in range(self.dim * self.dim):
-            if self.backing_array[the_id] is not None:
+            if self.backing_array[the_id] != 0:
                 val = self.backing_array[the_id]
                 row, col = self.get_coord_for_id(the_id)
                 subsudoku = self.get_subsudoku_for_id(the_id)
@@ -250,7 +270,7 @@ class Sudoku:
         if val not in self.possibilities[the_id]: # The value we are trying to put into the cell cannot be used at that location.
             return False
 
-        if self.get_for_id(the_id) is None: # Check if cell is empty before overriding it.
+        if self.get_for_id(the_id) == 0: # Check if cell is empty before overriding it.
             self.set_for_id(the_id, val)
 
         for i in self.possible_values:
@@ -340,6 +360,7 @@ class Sudoku:
         
 
     def solve_minisat(self):
+        self.save_old_copy()
         self.generate_cnf_clauses()
         if not self.sat_solver.solve():
             return False
@@ -352,6 +373,9 @@ class Sudoku:
                 
 
         return True
+    
+    def save_old_copy(self):
+        self.old_copy = self.get_matrix()
 
 # Takes a 2D list (9x9) representation of a sudoku board and attempts to solve it (empty cells are represented by 0s).
 # Returns a matrix representing the solution for the input board (as a 9x9 as a 2D list) if the board is solved,
@@ -362,6 +386,7 @@ def solve_sudoku(sudoku_board, solution_type):
         print("Initialization Error")
         return None
     
+    pre_solution_capture = sudoku.capture_tidy_print()
     success = False
     if solution_type == SOLUTION_TYPE_BACKTRACKING:
         success = sudoku.solve_backtrack()
@@ -370,7 +395,8 @@ def solve_sudoku(sudoku_board, solution_type):
 
     if success:
         assert (sudoku.check())
-        sudoku.print_tidy()
+        post_solution_capture = sudoku.capture_tidy_print(True)
+        sudoku.print_old_and_new_captures(pre_solution_capture, post_solution_capture)
         print(CHECK_MARK)
         return sudoku.get_matrix()
     else:
@@ -453,8 +479,9 @@ def run_tests(solution_type, num_files_to_execute):
 
     return total_time_taken
 
-total_time_backtracking = run_tests(SOLUTION_TYPE_BACKTRACKING, NUM_FILES_TO_RUN_TESTS_ON)
-print("--------------------------")
-total_time_sat_solver = run_tests(SOLUTION_TYPE_SAT_SOLVER, NUM_FILES_TO_RUN_TESTS_ON)
-print("--------------------------")
-print('SAT Solver is performing %.3fx better than backtracking.' % (total_time_backtracking/total_time_sat_solver))
+if __name__ == '__main__':
+    total_time_backtracking = run_tests(SOLUTION_TYPE_BACKTRACKING, NUM_FILES_TO_RUN_TESTS_ON)
+    print("--------------------------")
+    total_time_sat_solver = run_tests(SOLUTION_TYPE_SAT_SOLVER, NUM_FILES_TO_RUN_TESTS_ON)
+    print("--------------------------")
+    print('SAT Solver is performing %.3fx better than backtracking.' % (total_time_backtracking/total_time_sat_solver))

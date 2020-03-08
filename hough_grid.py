@@ -27,6 +27,14 @@ DIGIT_WIDTH = 28
 DIGIT_HEIGHT = 28
 DIGIT_CHANNELS = 1
 
+# Gaussian blur parameters
+KERNEL_SIZE = (9, 9)
+SIGMA_X = 10.0
+
+# Unsharp weights
+ORIG_WEIGHT = 3.5
+GAUSSIAN_WEIGHT = -2.0
+
 
 # Accepts a grayscale image and returns list of edges from Canny edge detector
 def canny_edges(gray_img):

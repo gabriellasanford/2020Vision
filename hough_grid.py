@@ -44,7 +44,12 @@ def canny_edges(gray_img):
 # Accepts a grayscale image and returns the approximate width and height of
 # each cell in the Sudoku grid.
 def count_sudoku(gray_img):
-    edges = canny_edges(gray_img)
+    # Sharpen the image
+    gaussian_img = cv2.GaussianBlur(gray_img, KERNEL_SIZE, SIGMA_X)
+    sharp_img = cv2.addWeighted(gray_img, ORIG_WEIGHT, gaussian_img,\
+        GAUSSIAN_WEIGHT, 0, gray_img)
+    # Perform edge detection
+    edges = canny_edges(sharp_img)
     # Detect points that form lines, and give them to calculate_cells() to get
     # info on the Sudoku grid.
     lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH,\

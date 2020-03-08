@@ -17,9 +17,9 @@ AKA Dr. Hochberg's stuff
 # unnecessary overhead if not used
 classifier = None
 
-img_orig = cv2.imread("images/sudoku20.png", cv2.IMREAD_GRAYSCALE)
+img_orig = cv2.imread("images/sudoku25.png", cv2.IMREAD_GRAYSCALE)
 
-#hough.count_sudoku(img_orig)
+hough.count_sudoku(img_orig)
 
 # Show the original image
 # This is a matplotlib display, so we must close the window to move forward

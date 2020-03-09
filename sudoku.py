@@ -107,7 +107,7 @@ class Sudoku:
             return False
         for i in range(self.dim):
             for j in range(self.dim):
-                self.set(i, j, vals[i][j])
+                self.backing_array[self.get_id(i,j)] = vals[i][j]
         return True
 
     # Returns a 2D list representation of the Sudoku board.

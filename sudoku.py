@@ -1,15 +1,36 @@
 '''
-Yeabkal Wubshit
-Sudoku Solver using Backtracking and SAT Solver.
+    Yeabkal Wubshit
+    Sudoku Solver using Backtracking and SAT Solver.
 
-*** REQUIREMENTS ***
-To solve a Sudoku puzzle through a SAT solver, you need to have either:
- 1) PySAT module installed (https://pypi.org/project/python-sat/) [PREFERRED WAY]
- 2) `minisat` command line tool 
+    *** REQUIREMENTS ***
+    To solve a Sudoku puzzle through a SAT solver, you need to have either:
+    1) PySAT module installed (https://pypi.org/project/python-sat/) [PREFERRED WAY]
+    2) `minisat` command line tool 
+
+    *** Usage ***
+    import sudoku
+
+    # 2D list representation of the board to solve.
+    # Empty cells should be represented by 0s.
+    board = [...]
+
+    solution_approach = sudoku.SOLUTION_TYPE_BACKTRACKING 
+    # Or solution_approach = sudoku.SOLUTION_TYPE_SAT_SOLVER to use a SAT solver.
+
+    solution = sudoku.solve_sudoku(board, solution_approach)
+    if solultion != None:
+        # the board is solved.
+    else:
+        # the board cannot be solved.
 
 '''
+PYSAT_EXISTS = 0
+MINISAT_COMMAND_LINE_TOOL_EXISTS = 1
+NO_SAT_SOLVER_DETECTED = 2
 
-PYSAT_SOLVER_INSTALLED = True
+MINISAT_COMMAND_LINE_COMMAND = 'minisatt'
+
+SAT_SOLVER_STATUS_ON_MACHINE = NO_SAT_SOLVER_DETECTED
 
 import math
 from os import listdir
@@ -17,10 +38,14 @@ from os.path import isfile, join
 import time
 import random
 from os import system
+from shutil import which
+
 try:
     from pysat.solvers import Glucose3
+    SAT_SOLVER_STATUS_ON_MACHINE = PYSAT_EXISTS
 except:
-    PYSAT_SOLVER_INSTALLED = False
+    if which(MINISAT_COMMAND_LINE_COMMAND) is not None:
+        SAT_SOLVER_STATUS_ON_MACHINE = MINISAT_COMMAND_LINE_TOOL_EXISTS
 
 TEST_SUDOKU_FILES_DIRECTORY = './sudoku_data'
 
@@ -38,7 +63,7 @@ PRINT_SPACE = '          '
 CHECK_MARK = '\033[92m' + '\033[1m' + u'\u2713' + '\033[0m' # Green + Bold + CheckMark + EndColor
 FAIL_MARK = '\033[91m' + '\033[1m' + 'X' + '\033[0m' # Red + Bold + X + EndColor
 
-NUM_FILES_TO_RUN_TESTS_ON = 45
+NUM_FILES_TO_RUN_TESTS_ON = 10
 
 class Sudoku:
     def __init__(self, dim = 9):
@@ -380,9 +405,9 @@ class Sudoku:
                         self.add_clause([-col_elems[i], -col_elems[j]])
 
     def add_clause(self, clause):
-        if PYSAT_SOLVER_INSTALLED:
+        if SAT_SOLVER_STATUS_ON_MACHINE == PYSAT_EXISTS:
             self.sat_solver.add_clause(clause)
-        else:
+        elif SAT_SOLVER_STATUS_ON_MACHINE == MINISAT_COMMAND_LINE_TOOL_EXISTS:
             self.minisat_clauses.append(' '.join([str(x) for x in clause]) + ' 0')
 
     def write_clauses_to_file(self):	
@@ -401,11 +426,16 @@ class Sudoku:
         return [int(x) for x in (open(MINISAT_RESULT_FILE, 'r').readlines()[1].split())]
     
     def solve_sat_solver(self):
+        if SAT_SOLVER_STATUS_ON_MACHINE == NO_SAT_SOLVER_DETECTED:
+            print('\033[91m' + 'No applicable SAT solver detected on your machine.\n \
+                Please, install PySAT (pip3 install python-sat) and retry running this program.' + '\033[0m')
+            return False
+
         self.save_old_copy()
         self.generate_cnf_clauses()
         solution = []
 
-        if PYSAT_SOLVER_INSTALLED:
+        if SAT_SOLVER_STATUS_ON_MACHINE == PYSAT_EXISTS:
             if not self.sat_solver.solve():
                 return False
             solution = self.sat_solver.get_model()
@@ -443,6 +473,9 @@ def solve_sudoku(sudoku_board, solution_type):
     if solution_type == SOLUTION_TYPE_BACKTRACKING:
         success = sudoku.solve_backtrack()
     elif solution_type == SOLUTION_TYPE_SAT_SOLVER:
+        if SAT_SOLVER_STATUS_ON_MACHINE == NO_SAT_SOLVER_DETECTED:
+            print('\033[91m' + 'No applicable SAT solver detected on your machine.' + '\033[0m')
+            return None
         success = sudoku.solve_sat_solver()
 
     if success:
@@ -541,6 +574,10 @@ def run_tests(solution_type, num_files_to_execute):
 if __name__ == '__main__':
     total_time_backtracking = run_tests(SOLUTION_TYPE_BACKTRACKING, NUM_FILES_TO_RUN_TESTS_ON)
     print("--------------------------")
-    total_time_sat_solver = run_tests(SOLUTION_TYPE_SAT_SOLVER, NUM_FILES_TO_RUN_TESTS_ON)
-    print("--------------------------")
-    print('SAT Solver is performing %.3fx better than backtracking.' % (total_time_backtracking/total_time_sat_solver))
+    if SAT_SOLVER_STATUS_ON_MACHINE != NO_SAT_SOLVER_DETECTED:
+        total_time_sat_solver = run_tests(SOLUTION_TYPE_SAT_SOLVER, NUM_FILES_TO_RUN_TESTS_ON)
+        print("--------------------------")
+        print('SAT Solver is performing %.3fx better than backtracking.' % (total_time_backtracking/total_time_sat_solver))
+    else:
+        print('\033[91m' + 'No applicable SAT solver detected on your machine.\n \
+Please, install PySAT (pip3 install python-sat) and retry running this program.' + '\033[0m')

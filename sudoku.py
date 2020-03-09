@@ -529,12 +529,11 @@ def reduce_clues(sudoku_board, target_clues):
 # Times the tests.
 # Sudoku data obtained from the University of Vaasa's Sudoku Research Page (http://lipas.uwasa.fi/~timan/sudoku/)
 def run_tests(solution_type, num_files_to_execute):
-    global NUM_FILES_TO_RUN_TESTS_ON
     prefix = "./sudoku_data"
     sudoku_files = [f for f in listdir(prefix)]
 
-    if len(sudoku_files) < NUM_FILES_TO_RUN_TESTS_ON:
-        NUM_FILES_TO_RUN_TESTS_ON = len(sudoku_files)
+    if len(sudoku_files) < num_files_to_execute:
+        num_files_to_execute = len(sudoku_files)
     else:
         sudoku_files = sudoku_files[-num_files_to_execute:]
 

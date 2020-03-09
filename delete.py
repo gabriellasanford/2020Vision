@@ -28,11 +28,25 @@ DIGIT_WIDTH = 28
 DIGIT_HEIGHT = 28
 DIGIT_CHANNELS = 1
 
+# Gaussian blur parameters
+KERNEL_SIZE = (9, 9)
+SIGMA_X = 10.0
+
+# Unsharp weights
+ORIG_WEIGHT = 3.5
+GAUSSIAN_WEIGHT = -2.0
+
 # Read image. White = 255, Black = 0
-img_orig = 255-cv2.imread("images/sudoku25.png", cv2.IMREAD_GRAYSCALE)
+img_orig = 255-cv2.imread("sudoku_square/sudoku5.png", cv2.IMREAD_GRAYSCALE)
 Mrot = cv2.getRotationMatrix2D((img_orig.shape[0]/2, img_orig.shape[1]/2), \
-                               45, 1)
+                               0, 1)
 img_orig = cv2.warpAffine(img_orig, Mrot, (img_orig.shape))
+
+# Sharpen the image
+gaussian_img = cv2.GaussianBlur(img_orig, KERNEL_SIZE, SIGMA_X)
+img_orig = cv2.addWeighted(img_orig, ORIG_WEIGHT, gaussian_img,\
+    GAUSSIAN_WEIGHT, 0, img_orig)
+
 element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3), (1, 1))
 #img_orig = cv2.dilate(img_orig, element)
 
@@ -44,7 +58,7 @@ def randcol():
     return (rnd.randint(0, 255), rnd.randint(0, 255), rnd.randint(0, 255))
 
 cv2.imshow("Orig", img_orig)
-#cv2.waitKey()
+# cv2.waitKey()
 
 edges = canny_edges(img_orig)
 cv2.imshow("Canny", edges)

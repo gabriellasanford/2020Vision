@@ -1,5 +1,36 @@
-# Yeabkal Wubshit
-# Sudoku Solver using Backtracking and SAT Solver.
+'''
+    Yeabkal Wubshit
+    Sudoku Solver using Backtracking and SAT Solver.
+
+    *** REQUIREMENTS ***
+    To solve a Sudoku puzzle through a SAT solver, you need to have either:
+    1) PySAT module installed (https://pypi.org/project/python-sat/) [PREFERRED WAY]
+    2) `minisat` command line tool 
+
+    *** Usage ***
+    import sudoku
+
+    # 2D list representation of the board to solve.
+    # Empty cells should be represented by 0s.
+    board = [...]
+
+    solution_approach = sudoku.SOLUTION_TYPE_BACKTRACKING 
+    # Or solution_approach = sudoku.SOLUTION_TYPE_SAT_SOLVER to use a SAT solver.
+
+    solution = sudoku.solve_sudoku(board, solution_approach)
+    if solultion != None:
+        # the board is solved.
+    else:
+        # the board cannot be solved.
+
+'''
+PYSAT_EXISTS = 0
+MINISAT_COMMAND_LINE_TOOL_EXISTS = 1
+NO_SAT_SOLVER_DETECTED = 2
+
+MINISAT_COMMAND_LINE_COMMAND = 'minisatt'
+
+SAT_SOLVER_STATUS_ON_MACHINE = NO_SAT_SOLVER_DETECTED
 
 import math
 from os import listdir
@@ -7,27 +38,41 @@ from os.path import isfile, join
 import time
 import random
 from os import system
-from pysat.solvers import Glucose3
+from shutil import which
+
+try:
+    from pysat.solvers import Glucose3
+    SAT_SOLVER_STATUS_ON_MACHINE = PYSAT_EXISTS
+except:
+    if which(MINISAT_COMMAND_LINE_COMMAND) is not None:
+        SAT_SOLVER_STATUS_ON_MACHINE = MINISAT_COMMAND_LINE_TOOL_EXISTS
 
 TEST_SUDOKU_FILES_DIRECTORY = './sudoku_data'
 
 SOLUTION_TYPE_BACKTRACKING = 0
 SOLUTION_TYPE_SAT_SOLVER = 1
 
+# Temp files to be used if `minisat` command line tool is utilized.
+SUDOKU_CNF_FILE = 'del.cnf'	
+MINISAT_RESULT_FILE = 'sol.txt'	
+OUTPUT_BUFFER = 'del.txt'
+
+PRINT_SPACE = '          '
+
 # Tidy print constants
 CHECK_MARK = '\033[92m' + '\033[1m' + u'\u2713' + '\033[0m' # Green + Bold + CheckMark + EndColor
 FAIL_MARK = '\033[91m' + '\033[1m' + 'X' + '\033[0m' # Red + Bold + X + EndColor
 
-
-NUM_FILES_TO_RUN_TESTS_ON = 45
+NUM_FILES_TO_RUN_TESTS_ON = 10
 
 class Sudoku:
     def __init__(self, dim = 9):
         self.dim = dim
         self.sat_solver = Glucose3()
+        self.minisat_clauses = []
         self.possible_values = [(i + 1) for i in range(self.dim)]
         # Flattened representation of the Sudoku Board.
-        self.backing_array = [None for i in range(self.dim * self.dim)]
+        self.backing_array = [0 for i in range(self.dim * self.dim)]
         # possibilities[i] contains all values that can potentially go to the ith cell.
         self.possibilities = [set([i for i in range(1, self.dim + 1)]) for j in range(self.dim * self.dim)]
         # rows[i] contains all the cells that are in the ith row.
@@ -68,8 +113,9 @@ class Sudoku:
     def get_matrix(self):
         return [self.backing_array[i*self.dim:i*self.dim+self.dim] for i in range(self.dim)]
 
-    # Prints the Sudoku board.
-    def print_tidy(self):
+    # Captures a tidy print representation of the Sudoku board.
+    def capture_tidy_print(self, is_solution=False):
+        capture = []
         sqrt = int(math.sqrt(self.dim))
         printable = self.get_matrix()
         top_bottom_rows = '* '
@@ -80,16 +126,35 @@ class Sudoku:
 
         for row in range(self.dim):
             if row == 0:
-               print(top_bottom_rows)
+               capture.append(top_bottom_rows)
             to_print = '| '
             for col in range(self.dim):
-                to_print += str(printable[row][col]) + ' '
+                char_to_print = ''
+                if printable[row][col] != 0:
+                    char_to_print = str(printable[row][col])
+                    if is_solution and self.old_copy[row][col] == 0:
+                        char_to_print = '\033[92m' + '\033[1m' + char_to_print + '\033[0m'
+                else:
+                    char_to_print = FAIL_MARK
+                to_print += char_to_print + ' '
                 if (col + 1) % sqrt == 0:
                     to_print += '| '
-            print(to_print)
+            capture.append(to_print)
             if (row + 1) % sqrt == 0:
-                print(top_bottom_rows)
-        print()
+                capture.append(top_bottom_rows)
+
+        return capture
+    
+    def print_tidy_capture(self, capture):
+        for captured_line in capture:
+            print(captured_line)
+    
+    def print_old_and_new_captures(self, oldc, newc):
+        for i in range(len(oldc)):
+            if i == 6: # Middle section...print arrow.
+                print(oldc[i] + '=========>' + newc[i])
+            else:
+                print(oldc[i] + PRINT_SPACE + newc[i])
 
     # Returns the subsudoku where the cell (x,y) is located in.
     def get_subsudoku(self, x, y):
@@ -149,7 +214,7 @@ class Sudoku:
 
     # Clears the value at the location (x,y) represented by `the_id`.
     def clear_for_id(self, the_id):
-        self.backing_array[the_id] = None
+        self.backing_array[the_id] = 0
         for pair in self.memo[the_id]:
             self.possibilities[pair[0]].add(pair[1])
         self.memo[the_id] = []
@@ -210,9 +275,11 @@ class Sudoku:
     # Attempt to solve the Sudoku.,
     # Returns True if the board is successfully solved, False if otherwise.
     def solve_backtrack(self):
+        self.save_old_copy()
         # Account for the clues.
+
         for the_id in range(self.dim * self.dim):
-            if self.backing_array[the_id] is not None:
+            if self.backing_array[the_id] != 0:
                 val = self.backing_array[the_id]
                 row, col = self.get_coord_for_id(the_id)
                 subsudoku = self.get_subsudoku_for_id(the_id)
@@ -250,7 +317,7 @@ class Sudoku:
         if val not in self.possibilities[the_id]: # The value we are trying to put into the cell cannot be used at that location.
             return False
 
-        if self.get_for_id(the_id) is None: # Check if cell is empty before overriding it.
+        if self.get_for_id(the_id) == 0: # Check if cell is empty before overriding it.
             self.set_for_id(the_id, val)
 
         for i in self.possible_values:
@@ -263,20 +330,19 @@ class Sudoku:
 
     # Takes a 2D representation of a sudoku board and prints its solution.
     def generate_cnf_clauses(self):
-        clauses = []
         # Make sure that the pre-filled clues are considered (enforced)...
         for the_id in range(self.dim * self.dim):
             num = self.get_for_id(the_id)
             if num is not None and num != 0:
                 x, y = self.get_coord_for_id(the_id)
-                self.sat_solver.add_clause([self.code(num, x, y)])
+                self.add_clause([self.code(num, x, y)])
         
         # Enforce only 1 entry of all the entries that can go to a cell is included.
         for row in range(self.dim):
             for col in range(self.dim):
                 for i in range(1,self.dim):
                     for j in range(2,self.dim + 1):
-                        self.sat_solver.add_clause([-i, -j])
+                        self.add_clause([-i, -j])
 
 
         # Enforce at least one of all the entries of every number that can go to a cell is included.
@@ -286,7 +352,7 @@ class Sudoku:
                 for num in range(1,self.dim + 1):
                     num_code = self.code(num, row, col)
                     clause.append(num_code)
-                self.sat_solver.add_clause(clause)
+                self.add_clause(clause)
         
         sqrt = int(math.sqrt(self.dim))
         # Enforce no repeat of any number within a 3x3 subsudoku.
@@ -303,7 +369,7 @@ class Sudoku:
                     
                     for i in range(len(grid3x3) - 1):
                         for j in range(i + 1, len(grid3x3)):
-                            self.sat_solver.add_clause([-grid3x3[i], -grid3x3[j]])
+                            self.add_clause([-grid3x3[i], -grid3x3[j]])
                     
         for num in range(1, self.dim + 1):
             for row in range(self.dim):
@@ -325,26 +391,63 @@ class Sudoku:
                 # Enforce no repeatition of any number within a row.
                 for i in range(len(row_elems) - 1):
                     for j in range(i + 1, len(row_elems)):
-                        self.sat_solver.add_clause([-row_elems[i], -row_elems[j]])
+                        self.add_clause([-row_elems[i], -row_elems[j]])
 
                 # Enforce that a number appears at least once in a column.
                 clause = []
                 for elem in col_elems:
                     clause.append(elem)
-                self.sat_solver.add_clause(clause)
+                self.add_clause(clause)
 
                 # Enforce no repeatition of any number within a column.
                 for i in range(len(col_elems) - 1):
                     for j in range(i + 1, len(col_elems)):
-                        self.sat_solver.add_clause([-col_elems[i], -col_elems[j]])
-        
+                        self.add_clause([-col_elems[i], -col_elems[j]])
 
-    def solve_minisat(self):
-        self.generate_cnf_clauses()
-        if not self.sat_solver.solve():
+    def add_clause(self, clause):
+        if SAT_SOLVER_STATUS_ON_MACHINE == PYSAT_EXISTS:
+            self.sat_solver.add_clause(clause)
+        elif SAT_SOLVER_STATUS_ON_MACHINE == MINISAT_COMMAND_LINE_TOOL_EXISTS:
+            self.minisat_clauses.append(' '.join([str(x) for x in clause]) + ' 0')
+
+    def write_clauses_to_file(self):	
+        cnf = open(SUDOKU_CNF_FILE, 'w')	
+        sqrt = int(math.sqrt(self.dim))	
+        num_variables = (self.dim**sqrt)	
+
+        cnf.write('p cnf %d %d\n' % (num_variables, len(self.minisat_clauses)))	
+        for clause in self.minisat_clauses:	
+            cnf.write(clause + '\n')	
+        cnf.close()	
+
+    # Runs the minisat command line tool.
+    def run_minisat(self):	
+        system("minisat %s %s > %s"%(SUDOKU_CNF_FILE, MINISAT_RESULT_FILE, OUTPUT_BUFFER))	
+        return [int(x) for x in (open(MINISAT_RESULT_FILE, 'r').readlines()[1].split())]
+    
+    def solve_sat_solver(self):
+        if SAT_SOLVER_STATUS_ON_MACHINE == NO_SAT_SOLVER_DETECTED:
+            print('\033[91m' + 'No applicable SAT solver detected on your machine.\n \
+                Please, install PySAT (pip3 install python-sat) and retry running this program.' + '\033[0m')
             return False
-        minisat_solution = self.sat_solver.get_model()
-        selected_cells = [x for x in minisat_solution if x > 0]
+
+        self.save_old_copy()
+        self.generate_cnf_clauses()
+        solution = []
+
+        if SAT_SOLVER_STATUS_ON_MACHINE == PYSAT_EXISTS:
+            if not self.sat_solver.solve():
+                return False
+            solution = self.sat_solver.get_model()
+        else:
+            self.write_clauses_to_file()
+            solution = self.run_minisat()
+
+            system("rm %s"%SUDOKU_CNF_FILE)
+            system("rm %s"%MINISAT_RESULT_FILE)
+            system("rm %s"%OUTPUT_BUFFER)
+
+        selected_cells = [x for x in solution if x > 0]
         
         for i in selected_cells:
             num, row, column = self.decode(i)        
@@ -352,6 +455,9 @@ class Sudoku:
                 
 
         return True
+    
+    def save_old_copy(self):
+        self.old_copy = self.get_matrix()
 
 # Takes a 2D list (9x9) representation of a sudoku board and attempts to solve it (empty cells are represented by 0s).
 # Returns a matrix representing the solution for the input board (as a 9x9 as a 2D list) if the board is solved,
@@ -362,15 +468,20 @@ def solve_sudoku(sudoku_board, solution_type):
         print("Initialization Error")
         return None
     
+    pre_solution_capture = sudoku.capture_tidy_print()
     success = False
     if solution_type == SOLUTION_TYPE_BACKTRACKING:
         success = sudoku.solve_backtrack()
     elif solution_type == SOLUTION_TYPE_SAT_SOLVER:
-        success = sudoku.solve_minisat()
+        if SAT_SOLVER_STATUS_ON_MACHINE == NO_SAT_SOLVER_DETECTED:
+            print('\033[91m' + 'No applicable SAT solver detected on your machine.' + '\033[0m')
+            return None
+        success = sudoku.solve_sat_solver()
 
     if success:
         assert (sudoku.check())
-        sudoku.print_tidy()
+        post_solution_capture = sudoku.capture_tidy_print(True)
+        sudoku.print_old_and_new_captures(pre_solution_capture, post_solution_capture)
         print(CHECK_MARK)
         return sudoku.get_matrix()
     else:
@@ -445,6 +556,13 @@ def run_tests(solution_type, num_files_to_execute):
         
     total_time_taken = time.time() - start_time
     average_solve_time = (total_time_taken)/solved_sudokus_count
+
+    solution_type_str = ''
+    if solution_type == SOLUTION_TYPE_BACKTRACKING:
+        solution_type_str = 'BACKTRACKING'
+    else:
+        solution_type_str = 'SAT SOLVER'
+    print('\033[1m' + 'ANALYSIS FOR ' + solution_type_str + ' SOLUTION.' + '\033[0m')
     print("Total time taken for %d sudokus: %ss." % (solved_sudokus_count, round(total_time_taken, 3)))
     print("Failed solve attempts: %d" % (NUM_FILES_TO_RUN_TESTS_ON - solved_sudokus_count))
     print("Average time taken per sudoku: %ss." % (round(average_solve_time, 3)))
@@ -453,8 +571,13 @@ def run_tests(solution_type, num_files_to_execute):
 
     return total_time_taken
 
-total_time_backtracking = run_tests(SOLUTION_TYPE_BACKTRACKING, NUM_FILES_TO_RUN_TESTS_ON)
-print("--------------------------")
-total_time_sat_solver = run_tests(SOLUTION_TYPE_SAT_SOLVER, NUM_FILES_TO_RUN_TESTS_ON)
-print("--------------------------")
-print('SAT Solver is performing %.3fx better than backtracking.' % (total_time_backtracking/total_time_sat_solver))
+if __name__ == '__main__':
+    total_time_backtracking = run_tests(SOLUTION_TYPE_BACKTRACKING, NUM_FILES_TO_RUN_TESTS_ON)
+    print("--------------------------")
+    if SAT_SOLVER_STATUS_ON_MACHINE != NO_SAT_SOLVER_DETECTED:
+        total_time_sat_solver = run_tests(SOLUTION_TYPE_SAT_SOLVER, NUM_FILES_TO_RUN_TESTS_ON)
+        print("--------------------------")
+        print('SAT Solver is performing %.3fx better than backtracking.' % (total_time_backtracking/total_time_sat_solver))
+    else:
+        print('\033[91m' + 'No applicable SAT solver detected on your machine.\n \
+Please, install PySAT (pip3 install python-sat) and retry running this program.' + '\033[0m')

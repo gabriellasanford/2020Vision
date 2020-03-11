@@ -28,7 +28,7 @@ PYSAT_EXISTS = 0
 MINISAT_COMMAND_LINE_TOOL_EXISTS = 1
 NO_SAT_SOLVER_DETECTED = 2
 
-MINISAT_COMMAND_LINE_COMMAND = 'minisatt'
+MINISAT_COMMAND_LINE_COMMAND = 'minisat'
 
 SAT_SOLVER_STATUS_ON_MACHINE = NO_SAT_SOLVER_DETECTED
 
@@ -63,12 +63,13 @@ PRINT_SPACE = '          '
 CHECK_MARK = '\033[92m' + '\033[1m' + u'\u2713' + '\033[0m' # Green + Bold + CheckMark + EndColor
 FAIL_MARK = '\033[91m' + '\033[1m' + 'X' + '\033[0m' # Red + Bold + X + EndColor
 
-NUM_FILES_TO_RUN_TESTS_ON = 10
+NUM_FILES_TO_RUN_TESTS_ON = 45
 
 class Sudoku:
     def __init__(self, dim = 9):
         self.dim = dim
-        self.sat_solver = Glucose3()
+        if SAT_SOLVER_STATUS_ON_MACHINE == PYSAT_EXISTS:
+            self.sat_solver = Glucose3()
         self.minisat_clauses = []
         self.possible_values = [(i + 1) for i in range(self.dim)]
         # Flattened representation of the Sudoku Board.
@@ -106,7 +107,7 @@ class Sudoku:
             return False
         for i in range(self.dim):
             for j in range(self.dim):
-                self.set(i, j, vals[i][j])
+                self.backing_array[self.get_id(i,j)] = vals[i][j]
         return True
 
     # Returns a 2D list representation of the Sudoku board.
@@ -529,7 +530,13 @@ def reduce_clues(sudoku_board, target_clues):
 # Sudoku data obtained from the University of Vaasa's Sudoku Research Page (http://lipas.uwasa.fi/~timan/sudoku/)
 def run_tests(solution_type, num_files_to_execute):
     prefix = "./sudoku_data"
-    sudoku_files = [f for f in listdir(prefix)][-num_files_to_execute:]
+    sudoku_files = [f for f in listdir(prefix)]
+
+    if len(sudoku_files) < num_files_to_execute:
+        num_files_to_execute = len(sudoku_files)
+    else:
+        sudoku_files = sudoku_files[-num_files_to_execute:]
+
     boards = []
     for file_name in sudoku_files:
         file = open(join(prefix, file_name), "r")
@@ -555,7 +562,9 @@ def run_tests(solution_type, num_files_to_execute):
         min_time_taken = min(min_time_taken, time_taken)
         
     total_time_taken = time.time() - start_time
-    average_solve_time = (total_time_taken)/solved_sudokus_count
+    average_solve_time = 0.0
+    if solved_sudokus_count != 0:
+        average_solve_time = total_time_taken/solved_sudokus_count
 
     solution_type_str = ''
     if solution_type == SOLUTION_TYPE_BACKTRACKING:

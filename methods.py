@@ -402,9 +402,18 @@ def convolve(im, k):
                 for j in range(imw)] for i in range(imh)], dtype='float')
     new_img[new_img>255] = 255
     new_img[new_img<0] = 0
-    
+
     return new_img
 
+def convolve2(im, k):
+    print("Convolve")
+    k = np.ones((5,5),np.float32)/25
+    #im = cv2.imread("images/Sawyer.JPG", cv2.IMREAD_GRAYSCALE)
+    print(k)
+    print(im)
+    new_img = cv2.filter2D(im, -1, k)
+    print(new_img)
+    return new_img
 
 # David/Sri/Michael
 # Returns the convex hull as a list of points.

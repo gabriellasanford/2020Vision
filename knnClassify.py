@@ -154,11 +154,7 @@ def testKnn(feature):
     print(success/(success + failure))
     print(np.array(predictions))
 
-# List of implemented feature functions
-all_features = [meth.draw_and_quarter, meth.waviness, meth.hv_weights,\
-                meth.top_bottom_balance, meth.combineWavy,\
-                meth.vertical_lines, meth.sectional_density, meth.slantiness,\
-                meth.edginess, meth.Sobelness]
+
 
 # Returns a trained KNN object for a feature.
 def getTrainedKnn(feature):
@@ -238,14 +234,14 @@ test_digit_map = make_digit_map(test_data)
 all_features = [meth.draw_and_quarter, meth.waviness, meth.hv_weights,\
                 meth.top_bottom_balance, meth.combineWavy,\
                 meth.vertical_lines, meth.sectional_density, meth.slantiness,\
-                meth.edginess, meth.Sobelness]
-all_features = []
+                meth.edginess, meth.Sobelness, meth.hog]
+all_features = [meth.hog]
 
 for f in all_features:
     testKnn(f)
 
     
-    
+                       
     
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-
+from HOG import HOG
 """
     FEATURE FUNCTIONS
 """
@@ -247,7 +247,19 @@ def Hough_circles(img):
     #plt.show()
     return sectional_density(hough[0])
 
+hog_object = None
+def hog(img):
+    global hog_object
+    img = img.astype(np.uint8)
+    
+    if hog_object == None: # Build the hog object just once
+        hog_object = HOG(28, 28, 4, 8, 20)
+        
+    rv = hog_object.computeHOG(img)
+    #hog_object.display_HOG()
+    return rv
 
+    
 
 ###############################################################################
 # Quarter slicer

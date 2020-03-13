@@ -1,10 +1,15 @@
+import contour_board as contour
 import cv2
 import numpy as np
 import math
 import matplotlib as plt
+import statistics
 
 
 # Constants
+# Image filepath
+INPUT_IMG = "sudoku_square/sudoku12.png"
+
 # Canny thresholds
 THRESH_ONE = 10
 THRESH_TWO = 200
@@ -35,25 +40,42 @@ SIGMA_X = 10.0
 ORIG_WEIGHT = 3.5
 GAUSSIAN_WEIGHT = -2.0
 
+# K-means centers
+ANGLE_CENTERS = 2
+DIFF_CENTERS = 10
+
 
 # Accepts a grayscale image and returns list of edges from Canny edge detector
 def canny_edges(gray_img):
     return cv2.Canny(gray_img, THRESH_ONE, THRESH_TWO)
 
 
+# Accepts a grayscale image and performs unsharp masking using Gaussian blur,
+# then returns the sharpened image.
+def unsharp_mask(gray_img):
+    gaussian_img = cv2.GaussianBlur(gray_img, KERNEL_SIZE, SIGMA_X)
+    sharp_img = cv2.addWeighted(gray_img, ORIG_WEIGHT, gaussian_img,\
+        GAUSSIAN_WEIGHT, 0, gray_img)
+    return sharp_img
+
+
+# Accepts an image and returns a list of Hough lines.
+def lines(img):
+    # Perform edge detection
+    edges = canny_edges(img)
+    lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH,\
+        minLineLength=MIN_LENGTH, maxLineGap=MAX_GAP)
+    return lines
+
+
 # Accepts a grayscale image and returns the approximate width and height of
 # each cell in the Sudoku grid.
 def count_sudoku(gray_img):
     # Sharpen the image
-    gaussian_img = cv2.GaussianBlur(gray_img, KERNEL_SIZE, SIGMA_X)
-    sharp_img = cv2.addWeighted(gray_img, ORIG_WEIGHT, gaussian_img,\
-        GAUSSIAN_WEIGHT, 0, gray_img)
-    # Perform edge detection
-    edges = canny_edges(sharp_img)
+    sharp_img = unsharp_mask(gray_img)
     # Detect points that form lines, and give them to calculate_cells() to get
     # info on the Sudoku grid.
-    lines = cv2.HoughLinesP(edges, RHO, THETA, LINE_THRESH,\
-        minLineLength=MIN_LENGTH, maxLineGap=MAX_GAP)
+    lines = lines(sharp_img)
     grid_info = calculate_cells(lines)
     # Get the individual digit images
     img_squares = collect_squares(gray_img, grid_info)
@@ -169,3 +191,34 @@ def grid_slice(img, x_start, y_start, width, height):
     x_end = x_start + width + 1
     y_end = y_start + height + 1
     return img[x_start:x_end, y_start:y_end]
+
+
+# Accepts a list of lines and returns a list of the angles of the lines.
+# Borrows Dr. Hochberg's code from delete.py.
+def angles(lines):
+    angles = [-np.arctan((l[0][3]-l[0][1])/(l[0][2]-l[0][0])) for l in lines]
+    return angles
+
+
+# Accepts a list of angles and returns the 3 principal angles found using
+# k-means clustering.\
+# Borrows Dr. Hochberg's code from delete.py.
+def principal_angles(angles):
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    retval, best_labels, centers\
+        = cv2.kmeans(np.asarray(angles, dtype='float32'), ANGLE_CENTERS, None,\
+        criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    centers *= (180/math.pi)
+    return centers
+    
+
+# Main function
+# Used for testing
+def main():
+    img = cv2.imread(INPUT_IMG, cv2.IMREAD_GRAYSCALE)
+    img = contour.threshold(img)
+    count_sudoku(img)
+
+
+if __name__ == "__main__":
+    main()

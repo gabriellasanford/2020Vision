@@ -1,4 +1,5 @@
 import hough_grid as hagrid
+import contour_board as contour
 import cv2
 import math
 import random as rnd
@@ -15,7 +16,7 @@ RHO = 1
 THETA = math.pi/180
 LINE_THRESH = 50
 MIN_LENGTH = 25.0
-MAX_GAP = 15.0
+MAX_GAP = 40.0
 
 # Line drawing thickness
 THICKNESS = 3
@@ -29,7 +30,7 @@ DIGIT_HEIGHT = 28
 DIGIT_CHANNELS = 1
 
 # Gaussian blur parameters
-KERNEL_SIZE = (9, 9)
+KERNEL_SIZE = (7, 7)
 SIGMA_X = 10.0
 
 # Unsharp weights
@@ -37,15 +38,14 @@ ORIG_WEIGHT = 3.5
 GAUSSIAN_WEIGHT = -2.0
 
 # Read image. White = 255, Black = 0
-img_orig = 255-cv2.imread("sudoku_square/sudoku5.png", cv2.IMREAD_GRAYSCALE)
+img_orig = 255-cv2.imread("sudoku_midterm/sudoku5.png", cv2.IMREAD_GRAYSCALE)
 Mrot = cv2.getRotationMatrix2D((img_orig.shape[0]/2, img_orig.shape[1]/2), \
                                0, 1)
 img_orig = cv2.warpAffine(img_orig, Mrot, (img_orig.shape))
 
 # Sharpen the image
-gaussian_img = cv2.GaussianBlur(img_orig, KERNEL_SIZE, SIGMA_X)
-img_orig = cv2.addWeighted(img_orig, ORIG_WEIGHT, gaussian_img,\
-    GAUSSIAN_WEIGHT, 0, img_orig)
+img_orig = hagrid.unsharp_mask(img_orig)
+img_orig = contour.threshold(img_orig)
 
 element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3), (1, 1))
 #img_orig = cv2.dilate(img_orig, element)
@@ -74,8 +74,8 @@ angles = [-np.arctan((l[0][3]-l[0][1])/(l[0][2]-l[0][0])) for l in lines]
 # Cluster them to find the principle angles
 num_centers = 3
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-ret, a_labels, a_centers = cv2.kmeans(np.asarray(angles, dtype='float32'), num_centers, \
-                    None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+ret, a_labels, a_centers = cv2.kmeans(np.asarray(angles, dtype='float32'),\
+    num_centers, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
 # Build a dictionary mapping each label (0, 1, 2, ...) to its frequency in the list
 a_labels_map = Counter(a_labels.ravel().tolist())

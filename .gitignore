@@ -130,3 +130,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# PyCharm workspace data
+.idea/workspace.xml

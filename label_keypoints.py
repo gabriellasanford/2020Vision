@@ -12,9 +12,9 @@ import cv2
 
 class KeypointLabeler:
     def __init__(self):
-        self.image_directory: str = "sudoku_square"
+        self.image_directory: str = "sudoku_midterm"
         self.label_file: str = "sudoku_corners.txt"
-        self.keypoint_radius: int = 8
+        self.keypoint_radius: int = 4
         self.current_filename: str = ""
         self.current_image = None
         self.labels: Dict[str, List[Tuple[int, int]]]
@@ -44,6 +44,8 @@ class KeypointLabeler:
             self.write_labels()
 
     def read_labels(self) -> str:
+        if not os.path.exists(self.label_file):
+            return ""
         with open(self.label_file) as label_output_file:
             label_string = label_output_file.readline()
         return label_string
